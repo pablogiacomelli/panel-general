@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>MAHRA · Panel General</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f0f0d;--surface:#171714;--surface2:#1e1e1a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0ede8;--muted:#9a9690;--muted2:#8a867f;--ventas:#d4a853;--compras:#7ba8cc;--gastos:#e07060;--stock:#8fbe9e;--font-display:'Fraunces',Georgia,serif;--font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);display:flex;flex-direction:column;min-height:100vh}
+a{color:var(--ventas)}a:hover{color:#f0d79a}
+button{font:inherit}
+header{padding:22px 40px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.logo{font-family:var(--font-display);font-size:1.6rem;font-weight:300;letter-spacing:-0.01em}
+.logo em{color:var(--ventas);font-style:italic;font-weight:300}
+.logo-sub{font-size:12px;color:var(--muted2);font-family:var(--font-mono);margin-top:4px;letter-spacing:0.05em}
+.hdr-right{font-family:var(--font-mono);font-size:11px;color:var(--muted);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.hdr-right a{color:var(--muted);text-decoration:none;border:1px solid var(--border2);padding:8px 12px}
+.hdr-right a:hover{color:var(--text);border-color:var(--muted)}
+nav.tabs{padding:0 40px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap}
+.tab{display:flex;align-items:center;gap:8px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:14px;padding:14px 16px;cursor:pointer;min-height:48px}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--text)}
+.tab .dot{width:7px;height:7px;border-radius:50%}
+.wip{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--compras);border:1px solid rgba(123,168,204,.45);padding:2px 6px;border-radius:2px}
+main{flex:1;display:flex;flex-direction:column;min-height:0}
+.view{display:none;flex:1;flex-direction:column;min-height:0}
+.view.on{display:flex}
+.inicio{padding:32px 40px 48px;gap:32px;overflow:auto}
+h2.sec{font-family:var(--font-display);font-weight:300;font-size:20px;margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);padding:24px;display:flex;flex-direction:column;gap:16px;position:relative}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c)}
+.card-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h3{font-family:var(--font-display);font-weight:300;font-size:22px}
+.chip{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:2px}
+.chip.live{color:var(--stock);border:1px solid rgba(143,190,158,.5)}
+.chip.wipc{color:var(--compras);border:1px solid rgba(123,168,204,.5)}
+.card p{color:#c9c5bd;font-size:13px;line-height:1.6}
+.secs{display:flex;flex-wrap:wrap;gap:6px}
+.secs span{font-family:var(--font-mono);font-size:10px;color:#c9c5bd;border:1px solid var(--border2);padding:4px 8px;border-radius:3px}
+.btn-open{align-self:flex-start;margin-top:auto;background:transparent;border:1px solid var(--c);color:var(--c);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:10px 14px;cursor:pointer;min-height:44px}
+.btn-open:hover{background:var(--c);color:#0f0f0d}
+.box{background:var(--surface);border:1px solid var(--border);padding:24px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;min-width:720px;border-collapse:collapse;font-family:var(--font-mono);font-size:12px}
+th{text-align:left;font-weight:400;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);padding:8px;border-bottom:1px solid var(--border2)}
+td{padding:10px 8px;border-bottom:1px solid var(--border);color:#c9c5bd}
+td:first-child{color:var(--text)}
+.ok{color:var(--stock)}.pend{color:var(--compras)}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)}
+.alert:last-child{border-bottom:none}
+.alert .d{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.alert b{font-weight:400;font-size:13px;display:block}
+.alert small{font-family:var(--font-mono);font-size:10px;color:var(--muted2)}
+.two{display:flex;flex-wrap:wrap;gap:16px}
+.two>*{flex:1 1 420px;min-width:0}
+.subbar{padding:10px 40px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sub{font-family:var(--font-mono);font-size:12px;padding:8px 14px;cursor:pointer;border-radius:3px;background:transparent;color:var(--muted);border:1px solid var(--border2);min-height:38px}
+.sub.on{background:var(--c);color:#0f0f0d;border-color:var(--c);font-weight:500}
+.subbar .ext{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted);text-decoration:none}
+.subbar .ext:hover{color:var(--text)}
+.frame{flex:1;min-height:0;position:relative}
+.frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+.placeholder{flex:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:14px;padding:48px 40px;max-width:900px}
+.placeholder h2{font-family:var(--font-display);font-weight:300;font-size:28px}
+.placeholder p{color:#c9c5bd;font-size:14px;line-height:1.7}
+.placeholder ul{list-style:none;display:flex;flex-direction:column;gap:8px;font-family:var(--font-mono);font-size:12px;color:#c9c5bd}
+.placeholder li::before{content:'— ';color:var(--compras)}
+footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--font-mono);font-size:11px;color:var(--muted2)}
+@media(max-width:768px){header,nav.tabs,.inicio,.subbar,.placeholder,footer{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">MAHRA <em>Panel General</em></div>
+    <div class="logo-sub">VENTAS · COMPRAS · GASTOS · STOCK</div>
+  </div>
+  <div class="hdr-right"><span id="hdrInfo">Inicio</span></div>
+</header>
+
+<nav class="tabs" aria-label="Módulos">
+  <button type="button" class="tab" data-tab="inicio"><span class="dot" style="background:var(--text)"></span>Inicio</button>
+  <button type="button" class="tab" data-tab="ventas"><span class="dot" style="background:var(--ventas)"></span>Ventas</button>
+  <button type="button" class="tab" data-tab="compras"><span class="dot" style="background:var(--compras)"></span>Compras <span class="wip">en construcción</span></button>
+  <button type="button" class="tab" data-tab="gastos"><span class="dot" style="background:var(--gastos)"></span>Gastos</button>
+  <button type="button" class="tab" data-tab="stock"><span class="dot" style="background:var(--stock)"></span>Stock</button>
+</nav>
+
+<main>
+  <section class="view inicio" id="v-inicio" aria-label="Inicio">
+    <div>
+      <h2 class="sec">Módulos</h2>
+      <div class="cards" id="cards"></div>
+    </div>
+    <div class="two">
+      <div class="box">
+        <h2 class="sec">Alertas automáticas</h2>
+        <div class="alert"><span class="d" style="background:var(--gastos)"></span><div><b>Insumos por debajo del mínimo</b><small>Bolsas y etiquetas · Telegram diario 09:00</small></div></div>
+        <div class="alert"><span class="d" style="background:var(--gastos)"></span><div><b>Stock: agotados, faltantes y sobrantes</b><small>Análisis de artículos · Telegram diario 08:45</small></div></div>
+        <div class="alert"><span class="d" style="background:var(--ventas)"></span><div><b>Presupuestos con vendedora mal cargada</b><small>Últimos 7 días · Telegram diario 09:30</small></div></div>
+      </div>
+      <div class="box">
+        <h2 class="sec">Próximos pasos</h2>
+        <div class="alert"><span class="d" style="background:var(--compras)"></span><div><b>Armar el módulo Compras</b><small>Por proveedor · por temporada · cuenta corriente · facturas pendientes</small></div></div>
+        <div class="alert"><span class="d" style="background:var(--ventas)"></span><div><b>Indicadores cruzados en el Inicio</b><small>Ventas, margen, compras, gastos, stock valorizado y resultado con un solo período</small></div></div>
+        <div class="alert"><span class="d" style="background:var(--gastos)"></span><div><b>Sumar Gastos mensuales y Deudas</b><small>Hoy son archivos locales: hay que mudar lo que guardan en el navegador sin perderlo</small></div></div>
+      </div>
+    </div>
+    <div class="box">
+      <h2 class="sec">De dónde sale cada dato</h2>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Módulo</th><th>Panel</th><th>Fuente</th><th>Actualización</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Ventas</td><td>Ventas Generales</td><td>Hoja Ventas_consolidadas (EcommApp + Tienda Nube)</td><td>Diario 09:00</td><td class="ok">En vivo</td></tr>
+          <tr><td>Compras</td><td>—</td><td>Compras de EcommApp + STAGING_COMPRAS</td><td>A definir</td><td class="pend">A construir</td></tr>
+          <tr><td>Gastos</td><td>Flujo Financiero</td><td>Hoja MOVIMIENTOS</td><td>Bancos día 5 · tarjetas día 11 · compras diario</td><td class="ok">En vivo</td></tr>
+          <tr><td>Gastos</td><td>Control de Cheques</td><td>Hoja CONTROL CHEQUES AGRUPADO</td><td>Al abrir</td><td class="ok">En vivo</td></tr>
+          <tr><td>Stock</td><td>Stock Intelligence</td><td>Stock de EcommApp (Metabase)</td><td>Diario 07:15</td><td class="ok">En vivo</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-ventas" style="--c:var(--ventas)" aria-label="Ventas"></section>
+  <section class="view" id="v-gastos" style="--c:var(--gastos)" aria-label="Gastos"></section>
+  <section class="view" id="v-stock" style="--c:var(--stock)" aria-label="Stock"></section>
+  <section class="view" id="v-compras" style="--c:var(--compras)" aria-label="Compras">
+    <div class="placeholder">
+      <span class="chip wipc">En construcción</span>
+      <h2>Compras</h2>
+      <p>Este módulo va a mostrar lo comprado a proveedores de mercadería y de servicios, a partir de las compras cargadas en EcommApp. Secciones propuestas:</p>
+      <ul>
+        <li>Por proveedor: monto, pares y precio promedio, con su evolución</li>
+        <li>Por temporada: compras por temporada y artículo (base del PPC de Ventas y Stock)</li>
+        <li>Cuenta corriente: deuda con proveedores, vencimientos y pagos</li>
+        <li>Facturas pendientes: las que están en STAGING_COMPRAS y todavía no entraron a EcommApp</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer><span>MAHRA · Panel General</span><span>Cada módulo muestra adentro el panel que ya existe</span></footer>
+
+<script>
+// Paneles que muestra cada módulo. Mismo dominio (pablogiacomelli.github.io): comparten el guardado del navegador.
+const MODS={
+  ventas:{name:'Ventas',color:'var(--ventas)',live:true,desc:'Lo vendido por local, tienda online y Kommo, con costo PPC y margen.',
+    panels:[{name:'Ventas Generales',url:'https://pablogiacomelli.github.io/ventas-dashboard/'}],
+    secs:['Panel','Comparativas','Vendedoras','Clientas']},
+  compras:{name:'Compras',color:'var(--compras)',live:false,desc:'Lo comprado a proveedores de mercadería y servicios. Todavía no está armado.',
+    panels:[],secs:['Por proveedor','Por temporada','Cuenta corriente','Facturas pendientes']},
+  gastos:{name:'Gastos',color:'var(--gastos)',live:true,desc:'Egresos e ingresos del flujo financiero y el control de cheques.',
+    panels:[{name:'Flujo Financiero',url:'https://pablogiacomelli.github.io/flujo-financiero/'},{name:'Control de Cheques',url:'https://pablogiacomelli.github.io/control-cheques/'}],
+    secs:['Flujo financiero','Cheques']},
+  stock:{name:'Stock',color:'var(--stock)',live:true,desc:'Stock por artículo, temporada y color, alertas, pedidos a proveedores e insumos.',
+    panels:[{name:'Stock Intelligence',url:'https://pablogiacomelli.github.io/stock-dashboard/'}],
+    secs:['Panel','Resumen por temporada','Análisis de artículos','Pedidos','Insumos']}
+};
+const ORDER=['ventas','compras','gastos','stock'];
+const subSel={};
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+
+function buildCards(){
+  document.getElementById('cards').innerHTML=ORDER.map(k=>{const m=MODS[k];return `
+    <article class="card" style="--c:${m.color}">
+      <div class="card-top"><h3>${esc(m.name)}</h3><span class="chip ${m.live?'live':'wipc'}">${m.live?'En vivo':'En construcción'}</span></div>
+      <p>${esc(m.desc)}</p>
+      <div class="secs">${m.secs.map(s=>`<span>${esc(s)}</span>`).join('')}</div>
+      <button type="button" class="btn-open" data-open="${k}">Abrir ${esc(m.name)} →</button>
+    </article>`;}).join('');
+}
+
+function renderModule(k){
+  const m=MODS[k];const v=document.getElementById('v-'+k);
+  if(!m.panels.length)return;
+  const i=subSel[k]||0;const p=m.panels[i];
+  if(!v.dataset.built){
+    v.innerHTML=`<div class="subbar">${m.panels.length>1?m.panels.map((q,j)=>`<button type="button" class="sub" data-mod="${k}" data-sub="${j}">${esc(q.name)}</button>`).join(''):`<span style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">${esc(p.name)}</span>`}<a class="ext" target="_blank" rel="noopener">Abrir en pestaña nueva ↗</a></div><div class="frame"></div>`;
+    v.dataset.built='1';
+  }
+  v.querySelectorAll('.sub').forEach(b=>b.classList.toggle('on',+b.dataset.sub===i));
+  v.querySelector('.ext').href=p.url;
+  const fr=v.querySelector('.frame');
+  // Un iframe por panel, se crea la primera vez que se abre y despues se conserva (no recarga al cambiar de pestaña).
+  let ifr=fr.querySelector(`iframe[data-i="${i}"]`);
+  if(!ifr){ifr=document.createElement('iframe');ifr.dataset.i=i;ifr.title=p.name;ifr.src=p.url;ifr.loading='eager';fr.appendChild(ifr);}
+  fr.querySelectorAll('iframe').forEach(f=>f.style.display=(f===ifr)?'block':'none');
+}
+
+function setTab(k,push){
+  if(!MODS[k]&&k!=='inicio')k='inicio';
+  document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===k;t.classList.toggle('on',on);t.style.borderBottomColor=on?(k==='inicio'?'var(--text)':MODS[k].color):'transparent';t.setAttribute('aria-current',on?'page':'false');});
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+k));
+  if(k!=='inicio')renderModule(k);
+  document.getElementById('hdrInfo').textContent=k==='inicio'?'Inicio':MODS[k].name+(MODS[k].panels.length?' · '+MODS[k].panels[subSel[k]||0].name:'');
+  if(push!==false){try{history.replaceState(null,'','#'+k+(subSel[k]?'-'+subSel[k]:''));}catch(e){}}
+}
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab]');if(t){setTab(t.dataset.tab);return;}
+  const o=e.target.closest('[data-open]');if(o){setTab(o.dataset.open);return;}
+  const s=e.target.closest('[data-sub]');if(s){subSel[s.dataset.mod]=+s.dataset.sub;setTab(s.dataset.mod);}
+});
+
+function fromHash(){const h=(location.hash||'').slice(1).split('-');const k=h[0]||'inicio';if(h[1])subSel[k]=+h[1]||0;setTab(k,false);}
+buildCards();
+fromHash();
+window.addEventListener('hashchange',fromHash);
+</script>
+</body>
+</html>
