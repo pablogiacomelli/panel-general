@@ -87,7 +87,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
 <nav class="tabs" aria-label="Módulos">
   <button type="button" class="tab" data-tab="inicio"><span class="dot" style="background:var(--text)"></span>Inicio</button>
   <button type="button" class="tab" data-tab="ventas"><span class="dot" style="background:var(--ventas)"></span>Ventas</button>
-  <button type="button" class="tab" data-tab="compras"><span class="dot" style="background:var(--compras)"></span>Compras <span class="wip">en construcción</span></button>
+  <button type="button" class="tab" data-tab="compras"><span class="dot" style="background:var(--compras)"></span>Compras</button>
   <button type="button" class="tab" data-tab="gastos"><span class="dot" style="background:var(--gastos)"></span>Gastos</button>
   <button type="button" class="tab" data-tab="stock"><span class="dot" style="background:var(--stock)"></span>Stock</button>
 </nav>
@@ -107,7 +107,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
       </div>
       <div class="box">
         <h2 class="sec">Próximos pasos</h2>
-        <div class="alert"><span class="d" style="background:var(--compras)"></span><div><b>Armar el módulo Compras</b><small>Por proveedor · por temporada · cuenta corriente · facturas pendientes</small></div></div>
+        <div class="alert"><span class="d" style="background:var(--compras)"></span><div><b>Compras: facturas pendientes</b><small>Sumar las facturas de STAGING_COMPRAS que todavía no entraron a EcommApp</small></div></div>
         <div class="alert"><span class="d" style="background:var(--ventas)"></span><div><b>Indicadores cruzados en el Inicio</b><small>Ventas, margen, compras, gastos, stock valorizado y resultado con un solo período</small></div></div>
         <div class="alert"><span class="d" style="background:var(--gastos)"></span><div><b>Sumar Gastos mensuales y Deudas</b><small>Hoy son archivos locales: hay que mudar lo que guardan en el navegador sin perderlo</small></div></div>
       </div>
@@ -118,7 +118,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
         <thead><tr><th>Módulo</th><th>Panel</th><th>Fuente</th><th>Actualización</th><th>Estado</th></tr></thead>
         <tbody>
           <tr><td>Ventas</td><td>Ventas Generales</td><td>Hoja Ventas_consolidadas (EcommApp + Tienda Nube)</td><td>Diario 09:00</td><td class="ok">En vivo</td></tr>
-          <tr><td>Compras</td><td>—</td><td>Compras de EcommApp + STAGING_COMPRAS</td><td>A definir</td><td class="pend">A construir</td></tr>
+          <tr><td>Compras</td><td>Compras</td><td>Compras y cuenta corriente de proveedores de EcommApp</td><td>En vivo al abrir</td><td class="ok">En vivo</td></tr>
           <tr><td>Gastos</td><td>Flujo Financiero</td><td>Hoja MOVIMIENTOS</td><td>Bancos día 5 · tarjetas día 11 · compras diario</td><td class="ok">En vivo</td></tr>
           <tr><td>Gastos</td><td>Control de Cheques</td><td>Hoja CONTROL CHEQUES AGRUPADO</td><td>Al abrir</td><td class="ok">En vivo</td></tr>
           <tr><td>Stock</td><td>Stock Intelligence</td><td>Stock de EcommApp (Metabase)</td><td>Diario 07:15</td><td class="ok">En vivo</td></tr>
@@ -130,19 +130,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
   <section class="view" id="v-ventas" style="--c:var(--ventas)" aria-label="Ventas"></section>
   <section class="view" id="v-gastos" style="--c:var(--gastos)" aria-label="Gastos"></section>
   <section class="view" id="v-stock" style="--c:var(--stock)" aria-label="Stock"></section>
-  <section class="view" id="v-compras" style="--c:var(--compras)" aria-label="Compras">
-    <div class="placeholder">
-      <span class="chip wipc">En construcción</span>
-      <h2>Compras</h2>
-      <p>Este módulo va a mostrar lo comprado a proveedores de mercadería y de servicios, a partir de las compras cargadas en EcommApp. Secciones propuestas:</p>
-      <ul>
-        <li>Por proveedor: monto, pares y precio promedio, con su evolución</li>
-        <li>Por temporada: compras por temporada y artículo (base del PPC de Ventas y Stock)</li>
-        <li>Cuenta corriente: deuda con proveedores, vencimientos y pagos</li>
-        <li>Facturas pendientes: las que están en STAGING_COMPRAS y todavía no entraron a EcommApp</li>
-      </ul>
-    </div>
-  </section>
+  <section class="view" id="v-compras" style="--c:var(--compras)" aria-label="Compras"></section>
 </main>
 
 <footer><span>MAHRA · Panel General</span><span>Cada módulo muestra adentro el panel que ya existe</span></footer>
@@ -153,8 +141,8 @@ const MODS={
   ventas:{name:'Ventas',color:'var(--ventas)',live:true,desc:'Lo vendido por local, tienda online y Kommo, con costo PPC y margen.',
     panels:[{name:'Ventas Generales',url:'https://pablogiacomelli.github.io/ventas-dashboard/'}],
     secs:['Panel','Comparativas','Vendedoras','Clientas']},
-  compras:{name:'Compras',color:'var(--compras)',live:false,desc:'Lo comprado a proveedores de mercadería y servicios. Todavía no está armado.',
-    panels:[],secs:['Por proveedor','Por temporada','Cuenta corriente','Facturas pendientes']},
+  compras:{name:'Compras',color:'var(--compras)',live:true,desc:'Compras de artículos e insumos inventariables y la cuenta corriente de proveedores, en vivo desde EcommApp.',
+    panels:[{name:'Compras',url:'https://pablogiacomelli.github.io/panel-general/compras.html'}],secs:['Artículos','Insumos','Cuenta corriente']},
   gastos:{name:'Gastos',color:'var(--gastos)',live:true,desc:'Egresos e ingresos del flujo financiero y el control de cheques.',
     panels:[{name:'Flujo Financiero',url:'https://pablogiacomelli.github.io/flujo-financiero/'},{name:'Control de Cheques',url:'https://pablogiacomelli.github.io/control-cheques/'}],
     secs:['Flujo financiero','Cheques']},
