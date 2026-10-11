@@ -112,6 +112,28 @@ main{padding:28px 40px;max-width:1600px}
 .sm-table .td-num{text-align:right}
 .sm-table tr.clickable{cursor:pointer}
 .sm-table tr.clickable:hover td{background:var(--surface2)}
+.ms{position:relative;display:inline-block}
+.ms-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 10px;cursor:pointer;min-width:104px;text-align:left;outline:none}
+.ms-btn:hover{border-color:var(--accent)}
+.ms.sel .ms-btn{border-color:var(--accent);color:var(--accent)}
+.ms-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:300;background:var(--surface);border:1px solid var(--border2);min-width:170px;max-height:320px;overflow-y:auto;padding:6px;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+.ms.open .ms-panel{display:block}
+.ms-actions{display:flex;flex-wrap:wrap;gap:10px;padding:2px 4px 6px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.ms-actions span{font-size:10px;color:var(--accent);cursor:pointer;font-family:var(--font-mono);text-decoration:underline}
+.ms-item{display:flex;align-items:center;gap:7px;padding:4px 5px;font-size:11px;font-family:var(--font-mono);cursor:pointer;white-space:nowrap}
+.ms-item:hover{background:var(--surface2)}
+.ms-item input{cursor:pointer;accent-color:#7ba8cc}
+.ms-empty{color:var(--muted2);font-size:11px;font-family:var(--font-mono);padding:6px}
+.ms-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.ms-grid .ms-item{padding:4px 3px;gap:4px}
+#msDia .ms-panel{min-width:300px}
+.cmp-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.cmp-row .range-label{margin-left:6px}
+.cmp-leg{display:flex;gap:12px;flex-wrap:wrap}
+.cmp-leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--font-mono)}
+.cmp-leg-item i,.cmp-dot{display:inline-block;width:8px;height:8px;border-radius:1px}
+.cmp-dot{margin-right:7px}
+.preset-btn:disabled{opacity:.35;cursor:default;border-color:var(--border2)!important;color:var(--muted)!important;background:transparent!important}
 footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;font-family:var(--font-mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 @media(max-width:768px){header,.controls-bar,main,footer,.tabs-bar{padding-left:16px;padding-right:16px}.banner{margin-left:16px;margin-right:16px}.charts-grid{grid-template-columns:1fr}.chart-full{grid-column:1}.scorecards{grid-template-columns:repeat(2,1fr)}.sm-kpis{grid-template-columns:repeat(2,1fr)}.search{min-width:0;width:100%}.sc-value{font-size:20px}}
 </style>
@@ -127,7 +149,7 @@ footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color
     <button class="btn" id="btnLoad" onclick="cargar()">Actualizar</button>
   </div>
 </header>
-<div class="controls-bar">
+<div class="controls-bar" id="periodBar">
   <span class="range-label">Período</span>
   <input type="date" class="date-input" id="dDesde">
   <span class="muted mono">→</span>
@@ -144,6 +166,7 @@ footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color
   <button class="tab-btn" data-tab="art">Artículos<span class="tab-count" id="cntArt"></span></button>
   <button class="tab-btn" data-tab="ins">Insumos inventariables<span class="tab-count" id="cntIns"></span></button>
   <button class="tab-btn" data-tab="cc">Cuenta corriente proveedores<span class="tab-count" id="cntCc"></span></button>
+  <button class="tab-btn" data-tab="cmp">Comparativas</button>
 </div>
 <div class="banner info" id="cacheBanner"></div>
 <div class="banner err" id="errBanner"></div>
@@ -243,6 +266,72 @@ footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color
     <div class="note">Saldo positivo (rojo) = MAHRA le debe al proveedor. Saldo negativo (verde) = saldo a favor de MAHRA: pagó más de lo que hay cargado como deuda (pagos adelantados, cheques, o compras que se cargaron en otra condición de pago y no quedaron en cuenta corriente). El saldo total coincide con el balance de cuenta corriente de proveedores de EcommApp. No se calcula "vencido" porque la mayoría de los pagos a proveedores de mercadería se cargan sin imputar a una factura.</div>
   </div>
 </section>
+
+<!-- ================= COMPARATIVAS ================= -->
+<section class="tab-pane" id="pane-cmp">
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Comparativa de compras</div><div class="card-sub" id="cmpSub"></div></div>
+      <div class="chips">
+        <button class="preset-btn" onclick="cmpAtajo('mesAnt')" title="Mes en curso contra el mes anterior, los dos del día 1 al día de hoy">Este mes vs el anterior, a la misma fecha</button>
+        <button class="preset-btn" onclick="cmpAtajo('mesHoy')" title="Mes en curso del día 1 a hoy, contra el mismo tramo de los años anteriores">Este mes a hoy vs años anteriores</button>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <span class="range-label">Qué</span>
+      <div class="chips" id="cmpTipo">
+        <button class="preset-btn" data-v="articulo">Artículos</button>
+        <button class="preset-btn" data-v="insumo">Insumos</button>
+        <button class="preset-btn" data-v="ambos">Ambos</button>
+      </div>
+      <span class="range-label">Comparar por</span>
+      <div class="chips" id="cmpDim">
+        <button class="preset-btn" data-v="anio">Año</button>
+        <button class="preset-btn" data-v="mes">Mes</button>
+        <button class="preset-btn" data-v="temporada">Temporada</button>
+      </div>
+      <span class="range-label">Escala</span>
+      <div class="chips" id="cmpEsc">
+        <button class="preset-btn" data-v="dia">Días</button>
+        <button class="preset-btn" data-v="semana">Semanas</button>
+        <button class="preset-btn" data-v="mes">Meses</button>
+      </div>
+      <span class="range-label">Ver</span>
+      <div class="chips" id="cmpAcum">
+        <button class="preset-btn" data-v="0">Por período</button>
+        <button class="preset-btn" data-v="1">Acumulado</button>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <span class="range-label">Años</span>
+      <div class="ms" id="msAnio"><button type="button" class="ms-btn" onclick="cmsToggle('Anio')"><span id="msAnioLbl">Todos</span> ▾</button>
+        <div class="ms-panel"><div class="ms-actions"><span onclick="cmsAll('Anio',true)">Todos</span><span onclick="cmsAll('Anio',false)">Ninguno</span></div><div id="msAnioList"></div></div></div>
+      <span class="range-label">Meses</span>
+      <div class="ms" id="msMes"><button type="button" class="ms-btn" onclick="cmsToggle('Mes')"><span id="msMesLbl">Todos</span> ▾</button>
+        <div class="ms-panel"><div class="ms-actions"><span onclick="cmsAll('Mes',true)">Todos</span><span onclick="cmsAll('Mes',false)">Ninguno</span></div><div id="msMesList"></div></div></div>
+      <span class="range-label">Días</span>
+      <div class="ms" id="msDia"><button type="button" class="ms-btn" onclick="cmsToggle('Dia')"><span id="msDiaLbl">Todos</span> ▾</button>
+        <div class="ms-panel"><div class="ms-actions"><span onclick="cmsAll('Dia',true)">Todos</span><span onclick="cmsAll('Dia',false)">Ninguno</span><span onclick="cmsDiasHastaHoy()">1 a hoy</span></div><div id="msDiaList" class="ms-grid"></div></div></div>
+      <span class="range-label">Temporadas</span>
+      <div class="ms" id="msTemp"><button type="button" class="ms-btn" onclick="cmsToggle('Temp')"><span id="msTempLbl">Todas</span> ▾</button>
+        <div class="ms-panel"><div class="ms-actions"><span onclick="cmsAll('Temp',true)">Todas</span><span onclick="cmsAll('Temp',false)">Ninguna</span></div><div id="msTempList"></div></div></div>
+      <span class="range-label">Proveedores</span>
+      <div class="ms" id="msProv"><button type="button" class="ms-btn" onclick="cmsToggle('Prov')"><span id="msProvLbl">Todos</span> ▾</button>
+        <div class="ms-panel"><div class="ms-actions"><span onclick="cmsAll('Prov',true)">Todos</span><span onclick="cmsAll('Prov',false)">Ninguno</span></div><div id="msProvList"></div></div></div>
+    </div>
+    <div class="note" id="cmpResumen"></div>
+    <div class="table-scroll" style="margin-top:10px"><table class="data-table" id="tCmp"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div><div class="card-title">Monto comprado</div><div class="card-sub" id="cmpSub1"></div></div><div class="cmp-leg" id="cmpLeg1"></div></div>
+    <div class="chart-wrap tall"><canvas id="chCmpMonto"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div><div class="card-title" id="cmpTitCant">Cantidad comprada</div><div class="card-sub" id="cmpSub2"></div></div><div class="cmp-leg" id="cmpLeg2"></div></div>
+    <div class="chart-wrap tall"><canvas id="chCmpCant"></canvas></div>
+    <div class="note">Usa todas las compras disponibles (no el filtro de período de arriba). Fecha = fecha de compra. Las notas de crédito restan.</div>
+  </div>
+</section>
 </main>
 
 <footer><span>MAHRA · Panel de Compras</span><span id="footInfo"></span></footer>
@@ -268,7 +357,8 @@ const LS_UI = 'mahra-compras-ui-v1';
 const PALETTE = ['#7ba8cc','#d4a853','#e07060','#8fbe9e','#a78bfa','#fb923c','#38bdf8','#f472b6','#c4b5a0','#94a3b8'];
 
 let DATA = null;          // respuesta cruda
-let UI = { tab: 'art', desde: null, hasta: null, preset: 'anio', grupo: 'merc', tg: {} };
+const CMP_DEF = { tipo:'articulo', dim:'mes', esc:'dia', acum:true, sel:{} };
+let UI = { tab: 'art', desde: null, hasta: null, preset: 'anio', grupo: 'merc', tg: {}, cmp: Object.assign({}, CMP_DEF) };
 const charts = {};
 const sorts = {};
 
@@ -306,6 +396,7 @@ function syncControles(){
   document.querySelectorAll('.preset-btns .preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.p===UI.preset));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===UI.tab));
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.toggle('active', p.id==='pane-'+UI.tab));
+  document.getElementById('periodBar').style.display = UI.tab==='cmp' ? 'none' : '';
   document.querySelectorAll('#ccChips .preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===UI.grupo));
   document.querySelectorAll('.toggle').forEach(t=>{ const v=UI.tg[t.dataset.tg]||'monto'; t.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.v===v)); });
 }
@@ -372,7 +463,7 @@ function render(){
   const ins = D.L.filter(l=>l.t==='insumo' && enRango(l.f));
   document.getElementById('cntArt').textContent = $k(sum(art,l=>l.imp));
   document.getElementById('cntIns').textContent = $k(sum(ins,l=>l.imp));
-  renderArt(art); renderIns(ins); renderCc();
+  renderArt(art); renderIns(ins); renderCc(); renderCmp();
   document.getElementById('footInfo').textContent = 'Datos EcommApp desde '+fd(DATA.desde)+' · '+(D.L.length)+' renglones · '+D.M.length+' movimientos cta cte';
 }
 
@@ -566,6 +657,188 @@ function abrirProveedor(p){
     '<div class="sm-section"><h3>Libro mayor de cuenta corriente (completo)</h3>'+(ms.length?movsTabla(ms,true):'<div class="note">Este proveedor no tiene movimientos en cuenta corriente.</div>')+'</div>');
 }
 
+
+/* ================= COMPARATIVAS ================= */
+// ===== Motor de comparativas (mismo código en Ventas y en Compras) =====
+// Dimensión (qué es cada línea): 'anio' | 'mes' (cada línea es un mes de un año) | 'temporada'.
+// Escala (eje X): 'dia' | 'semana' | 'mes'. Semana = tramo fijo de días del mes (S1 1–7, S2 8–14,
+// S3 15–21, S4 22–28, S5 29–31) para que los años se comparen día contra día.
+const CMP_MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const CMP_SEM_RANGO=['','1–7','8–14','15–21','22–28','29–31'];
+function cmpSem(d){return Math.min(5,Math.floor((d-1)/7)+1);}
+function cmpRangos(nums){
+  const a=nums.map(Number).sort((x,y)=>x-y),out=[];let i=0;
+  while(i<a.length){let j=i;while(j+1<a.length&&a[j+1]===a[j]+1)j++;out.push(j>i?a[i]+'–'+a[j]:String(a[i]));i=j+1;}
+  return out.join(', ');
+}
+function cmpEje(dim,esc,meses,dias){
+  const sems=[...new Set(dias.map(cmpSem))].sort((a,b)=>a-b);
+  if(dim==='mes'){
+    if(esc==='semana')return{keys:sems.map(String),labels:sems.map(x=>'S'+x+' ('+CMP_SEM_RANGO[x]+')'),keyOf:(m,d)=>String(cmpSem(d))};
+    return{keys:dias.map(String),labels:dias.map(String),keyOf:(m,d)=>String(d)};
+  }
+  if(esc==='mes')return{keys:meses.map(String),labels:meses.map(m=>CMP_MESES[m]),keyOf:(m,d)=>String(m)};
+  const keys=[],labels=[];
+  if(esc==='semana'){
+    meses.forEach(m=>sems.forEach(x=>{keys.push(m+'-'+x);labels.push(CMP_MESES[m]+' S'+x);}));
+    return{keys,labels,keyOf:(m,d)=>m+'-'+cmpSem(d)};
+  }
+  meses.forEach(m=>{const ult=new Date(2024,m+1,0).getDate();dias.forEach(d=>{if(d<=ult){keys.push(m+'-'+d);labels.push(String(d).padStart(2,'0')+' '+CMP_MESES[m]);}});});
+  return{keys,labels,keyOf:(m,d)=>m+'-'+d};
+}
+function cmpSerieKey(dim,d,temp){
+  if(dim==='anio')return String(d.getFullYear());
+  if(dim==='mes')return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  return temp||'(sin temp.)';
+}
+function cmpSerieLbl(dim,s){if(dim!=='mes')return s;const p=s.split('-');return CMP_MESES[+p[1]-1]+' '+p[0];}
+// Fecha del primer día elegido dentro del tramo, para no dibujar el futuro. null = no aplica (temporadas).
+function cmpFechaTramo(dim,esc,serie,key,dias){
+  let y,m,dd;
+  if(dim==='anio')y=+serie;
+  else if(dim==='mes'){const p=serie.split('-');y=+p[0];m=+p[1]-1;}
+  else return null;
+  if(dim==='mes')dd=(esc==='semana')?dias.find(x=>cmpSem(x)===+key):+key;
+  else if(esc==='mes'){m=+key;dd=dias[0];}
+  else{const p=key.split('-');m=+p[0];dd=(esc==='semana')?dias.find(x=>cmpSem(x)===+p[1]):+p[1];}
+  if(dd==null)return null;
+  return new Date(y,m,dd);
+}
+// Valores de una serie sobre el eje: 0 donde no hubo movimiento, null en fechas futuras y antes
+// de que existan datos (inicio = primera fecha de toda la base). acum = suma corrida.
+// ratio = {num,den,f} para porcentajes (acumula num y den).
+function cmpValores(buckets,keys,fechaFn,acum,campo,ratio,inicio){
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  let a=0,an=0,ad=0;
+  return keys.map(k=>{
+    const b=buckets[k],f=fechaFn(k);
+    if(f&&f>hoy)return null;
+    if(f&&inicio&&f<inicio&&!b)return null;
+    if(ratio){
+      if(acum){if(b){an+=b[ratio.num];ad+=b[ratio.den];}return ad>0?ratio.f(an,ad):null;}
+      return b&&b[ratio.den]>0?ratio.f(b[ratio.num],b[ratio.den]):null;
+    }
+    const v=b?b[campo]:0;
+    if(acum){a+=v;return a;}
+    return v;
+  });
+}
+function cmpDelta(act,ant){
+  if(ant==null||!isFinite(ant)||Math.abs(ant)<1e-9)return '<span style="color:var(--muted2)">—</span>';
+  const p=(act-ant)/Math.abs(ant)*100;
+  return '<span style="color:'+(p>=0?'#8fbe9e':'#e07060')+'">'+(p>=0?'+':'')+p.toLocaleString('es-AR',{maximumFractionDigits:1})+'%</span>';
+}
+function cmpTextos(dim,esc,acum){
+  const ejeTxt=dim==='mes'?(esc==='semana'?'semana del mes':'día del mes'):({dia:'días',semana:'semanas',mes:'meses'}[esc]);
+  const dimTxt={anio:'Una línea por año',mes:'Una línea por mes',temporada:'Una línea por temporada'}[dim];
+  return{
+    sub:dimTxt+' · eje X: '+ejeTxt+(acum?' · acumulado':'')+(esc==='semana'?' · S1 = días 1–7, S2 = 8–14, S3 = 15–21, S4 = 22–28, S5 = 29–31':''),
+    por:'por '+({dia:'día',semana:'semana',mes:'mes'}[esc])+(acum?' · acumulado':'')
+  };
+}
+
+const CMS={Anio:new Set(),Mes:new Set(),Dia:new Set(),Temp:new Set(),Prov:new Set()};
+const CMSOPT={Anio:[],Mes:[],Dia:[],Temp:[],Prov:[]};
+function cmsToggle(k){ const el=document.getElementById('ms'+k); const ab=el.classList.contains('open'); document.querySelectorAll('.ms').forEach(x=>x.classList.remove('open')); if(!ab) el.classList.add('open'); }
+function cmsRender(k){
+  const opts=CMSOPT[k]||[];
+  document.getElementById('ms'+k+'List').innerHTML = opts.length ? opts.map(o=>{ const v=(typeof o==='object')?o.v:o, lab=(typeof o==='object')?o.lab:o;
+    return '<label class="ms-item"><input type="checkbox" value="'+esc(v)+'" '+(CMS[k].has(String(v))?'checked':'')+' onchange="cmsChange(\''+k+'\',this)">'+esc(lab)+'</label>'; }).join('') : '<div class="ms-empty">sin datos</div>';
+  cmsLabel(k);
+}
+function cmsLabel(k){
+  const n=CMS[k].size, tot=(CMSOPT[k]||[]).length, todas=(n===0||n===tot);
+  let lbl;
+  if(todas) lbl=(k==='Temp')?'Todas':'Todos';
+  else if(k==='Dia'){ lbl=cmpRangos([...CMS[k]]); if(lbl.length>14) lbl=n+' días'; }
+  else if(n===1){ const v=[...CMS[k]][0]; const o=(CMSOPT[k]||[]).find(o=>String((typeof o==='object')?o.v:o)===v); lbl=(o&&typeof o==='object')?o.lab:v; }
+  else lbl=n+' sel.';
+  document.getElementById('ms'+k+'Lbl').textContent=lbl;
+  document.getElementById('ms'+k).classList.toggle('sel',!todas);
+}
+function cmsSel(k){ const n=CMS[k].size, tot=(CMSOPT[k]||[]).length; return (n===0||n===tot)?[]:[...CMS[k]]; }
+function guardarCmp(){ UI.cmp.sel={}; for(const k in CMS) UI.cmp.sel[k]=[...CMS[k]]; guardarUI(); }
+function cmsChange(k,cb){ if(cb.checked) CMS[k].add(cb.value); else CMS[k].delete(cb.value); cmsLabel(k); guardarCmp(); renderCmp(); }
+function cmsAll(k,on){ CMS[k].clear(); if(on) (CMSOPT[k]||[]).forEach(o=>CMS[k].add(String((typeof o==='object')?o.v:o))); cmsRender(k); guardarCmp(); renderCmp(); }
+function cmsDiasHastaHoy(){ const h=new Date().getDate(); CMS.Dia.clear(); for(let d=1;d<=h;d++) CMS.Dia.add(String(d)); cmsRender('Dia'); guardarCmp(); renderCmp(); }
+document.addEventListener('click',e=>{ if(!e.target.closest('.ms')) document.querySelectorAll('.ms').forEach(x=>x.classList.remove('open')); });
+function cmpAtajo(t){
+  const h=new Date(), m=h.getMonth(), y=h.getFullYear(), c=UI.cmp;
+  CMS.Dia.clear(); for(let d=1;d<=h.getDate();d++) CMS.Dia.add(String(d));
+  CMS.Mes.clear(); CMS.Anio.clear(); CMS.Mes.add(String(m));
+  if(t==='mesHoy') c.dim='anio';
+  else { CMS.Mes.add(String((m+11)%12)); CMS.Anio.add(String(y)); if(m===0) CMS.Anio.add(String(y-1)); c.dim='mes'; }
+  c.esc='dia'; c.acum=true;
+  guardarCmp(); renderCmp();
+}
+function fechaL(f){ const p=f.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function renderCmp(){
+  if(!DATA) return;
+  const c=UI.cmp;
+  if(c.dim==='mes' && c.esc==='mes') c.esc='dia';
+  // botones
+  [['cmpTipo',c.tipo],['cmpDim',c.dim],['cmpEsc',c.esc],['cmpAcum',c.acum?'1':'0']].forEach(([id,v])=>document.querySelectorAll('#'+id+' .preset-btn').forEach(b=>b.classList.toggle('active',b.dataset.v===v)));
+  const bm=document.querySelector('#cmpEsc [data-v="mes"]'); bm.disabled=(c.dim==='mes'); bm.title=(c.dim==='mes')?'Comparando por mes, el eje es el día o la semana dentro del mes':'';
+  // base según el tipo y opciones de los filtros
+  const base=D.L.filter(l=>l.f && (c.tipo==='ambos' ? (l.t==='articulo'||l.t==='insumo') : l.t===c.tipo));
+  CMSOPT.Anio=[...new Set(base.map(l=>l.f.slice(0,4)))].sort().reverse();
+  CMSOPT.Mes=CMP_MESES.map((m,i)=>({v:i,lab:m}));
+  CMSOPT.Dia=Array.from({length:31},(_,i)=>({v:i+1,lab:i+1}));
+  CMSOPT.Temp=[...new Set(base.map(l=>l.tem||'(sin temp.)'))].sort().reverse();
+  CMSOPT.Prov=[...new Set(base.map(l=>l.pr))].sort();
+  for(const k in CMS){ [...CMS[k]].forEach(v=>{ if(!CMSOPT[k].some(o=>String((typeof o==='object')?o.v:o)===v)) CMS[k].delete(v); }); cmsRender(k); }
+  const fA=cmsSel('Anio'), fM=cmsSel('Mes'), fD=cmsSel('Dia'), fT=cmsSel('Temp'), fP=cmsSel('Prov');
+  const meses=(fM.length?fM.map(Number):CMP_MESES.map((_,i)=>i)).sort((a,b)=>a-b);
+  const dias=(fD.length?fD.map(Number):Array.from({length:31},(_,i)=>i+1)).sort((a,b)=>a-b);
+  const eje=cmpEje(c.dim,c.esc,meses,dias);
+  const acc={}, ext={};
+  let inicio=null;
+  for(const l of base){
+    const d=fechaL(l.f); if(!inicio||d<inicio) inicio=d;
+    if(fA.length && fA.indexOf(l.f.slice(0,4))<0) continue;
+    if(fM.length && fM.indexOf(String(d.getMonth()))<0) continue;
+    if(fD.length && fD.indexOf(String(d.getDate()))<0) continue;
+    if(fT.length && fT.indexOf(l.tem||'(sin temp.)')<0) continue;
+    if(fP.length && fP.indexOf(l.pr)<0) continue;
+    const s=cmpSerieKey(c.dim,d,l.tem), k=eje.keyOf(d.getMonth(),d.getDate());
+    if(!acc[s]){ acc[s]={}; ext[s]={dias:new Set(),cbs:new Set(),provs:new Set()}; }
+    const b=acc[s][k]||(acc[s][k]={monto:0,cant:0});
+    b.monto+=l.imp; b.cant+=l.q;
+    ext[s].dias.add(l.f); ext[s].cbs.add(cbKey(l)); ext[s].provs.add(l.pr);
+  }
+  const series=Object.keys(acc).sort();
+  const col=s=>PALETTE[series.indexOf(s)%PALETTE.length];
+  const unoSolo=eje.keys.length<=1, muchos=eje.keys.length>45;
+  const ds=campo=>series.map(s=>({label:cmpSerieLbl(c.dim,s),borderColor:col(s),backgroundColor:unoSolo?col(s):col(s)+'20',tension:.3,fill:false,pointRadius:muchos?0:3,pointHoverRadius:4,borderWidth:2,spanGaps:true,
+    data:cmpValores(acc[s],eje.keys,k=>cmpFechaTramo(c.dim,c.esc,s,k,dias),c.acum,campo,null,inicio)}));
+  const uni = c.tipo==='articulo'?'pares':(c.tipo==='insumo'?'unidades':'unidades (pares + insumos)');
+  const tx=cmpTextos(c.dim,c.esc,c.acum);
+  document.getElementById('cmpSub').textContent=tx.sub;
+  document.getElementById('cmpSub1').textContent='Importe con IVA '+tx.por;
+  document.getElementById('cmpSub2').textContent=uni.charAt(0).toUpperCase()+uni.slice(1)+' '+tx.por;
+  document.getElementById('cmpTitCant').textContent=c.tipo==='articulo'?'Pares comprados':'Cantidad comprada';
+  const leg=series.map(s=>'<span class="cmp-leg-item"><i style="background:'+col(s)+'"></i>'+esc(cmpSerieLbl(c.dim,s))+'</span>').join('');
+  document.getElementById('cmpLeg1').innerHTML=leg; document.getElementById('cmpLeg2').innerHTML=leg;
+  const opts=(fmtTip,fmtEje)=>({maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.parsed.y==null?null:' '+x.dataset.label+': '+fmtTip(x.parsed.y)}}},
+    scales:{x:{grid:{display:false},ticks:{autoSkip:true,maxRotation:0}},y:{beginAtZero:true,ticks:{callback:fmtEje}}}});
+  mkChart('chCmpMonto',{type:unoSolo?'bar':'line',data:{labels:eje.labels,datasets:ds('monto')},options:opts(v=>$m(v),v=>$k(v))});
+  mkChart('chCmpCant',{type:unoSolo?'bar':'line',data:{labels:eje.labels,datasets:ds('cant')},options:opts(v=>nn(v)+' '+(c.tipo==='articulo'?'pares':'u'),v=>nn(v))});
+  // tabla resumen por serie con variación contra la anterior
+  const filas=series.map(s=>{ let monto=0,cant=0; Object.values(acc[s]).forEach(b=>{monto+=b.monto;cant+=b.cant;}); return {s,monto,cant,cbs:ext[s].cbs.size,dias:ext[s].dias.size,provs:ext[s].provs.size}; });
+  const conDelta=c.dim!=='temporada';
+  const el=document.getElementById('tCmp');
+  el.innerHTML = filas.length ? '<thead><tr><th>'+({anio:'Año',mes:'Mes',temporada:'Temporada'}[c.dim])+'</th><th class="td-num">Monto</th><th class="td-num">'+(c.tipo==='articulo'?'Pares':'Unidades')+'</th><th class="td-num">Costo medio</th><th class="td-num">Comprobantes</th><th class="td-num">Proveedores</th><th class="td-num">Días con compras</th>'+(conDelta?'<th class="td-num">Δ monto</th><th class="td-num">Δ cantidad</th>':'')+'</tr></thead><tbody>'+
+    filas.map((f,i)=>({f,ant:i>0?filas[i-1]:null})).reverse().map(({f,ant})=>'<tr style="cursor:default"><td><i class="cmp-dot" style="background:'+col(f.s)+'"></i>'+esc(cmpSerieLbl(c.dim,f.s))+'</td><td class="td-num">'+$m(f.monto)+'</td><td class="td-num">'+nn(f.cant)+'</td><td class="td-num">'+(f.cant?$m(f.monto/f.cant):'—')+'</td><td class="td-num">'+f.cbs+'</td><td class="td-num">'+f.provs+'</td><td class="td-num">'+f.dias+'</td>'+
+      (conDelta?'<td class="td-num">'+(ant?cmpDelta(f.monto,ant.monto):'—')+'</td><td class="td-num">'+(ant?cmpDelta(f.cant,ant.cant):'—')+'</td>':'')+'</tr>').join('')+'</tbody>'
+    : '<tbody><tr><td><div class="empty">Sin compras con esos filtros</div></td></tr></tbody>';
+  document.getElementById('cmpResumen').textContent = series.length+' serie(s) · '+$m(sum(filas,f=>f.monto))+' · '+nn(sum(filas,f=>f.cant))+' '+uni+(inicio?' · datos de compras desde el '+fd(ymd(inicio)):'')+(conDelta&&series.length>1?' · Δ = variación contra la fila de abajo (la serie anterior).':'');
+}
+document.querySelectorAll('#cmpTipo .preset-btn,#cmpDim .preset-btn,#cmpEsc .preset-btn,#cmpAcum .preset-btn').forEach(b=>b.onclick=()=>{
+  const g=b.parentElement.id, c=UI.cmp;
+  if(g==='cmpTipo') c.tipo=b.dataset.v; else if(g==='cmpDim') c.dim=b.dataset.v; else if(g==='cmpEsc'){ if(c.dim==='mes'&&b.dataset.v==='mes') return; c.esc=b.dataset.v; } else c.acum=b.dataset.v==='1';
+  guardarUI(); renderCmp();
+});
+
 /* ---------- eventos ---------- */
 document.querySelectorAll('.preset-btns .preset-btn').forEach(b=>b.onclick=()=>{ aplicarPreset(b.dataset.p); guardarUI(); render(); });
 ['dDesde','dHasta'].forEach(id=>document.getElementById(id).onchange=()=>{ const a=document.getElementById('dDesde').value, b=document.getElementById('dHasta').value; if(a&&b&&a<=b){ UI.desde=a; UI.hasta=b; UI.preset=''; guardarUI(); render(); } });
@@ -577,6 +850,8 @@ let tq; ['qArt','qArtCb','qCc'].forEach(id=>document.getElementById(id).oninput=
 /* ---------- inicio ---------- */
 (function init(){
   try { const u=JSON.parse(lsGet(LS_UI)||'null'); if(u) UI=Object.assign(UI,u); } catch(e){}
+  UI.cmp=Object.assign({}, CMP_DEF, UI.cmp||{});
+  for(const k in CMS) (UI.cmp.sel[k]||[]).forEach(v=>CMS[k].add(String(v)));
   if(UI.preset) aplicarPreset(UI.preset); else if(!UI.desde){ aplicarPreset('anio'); }
   syncControles();
   try { const c=JSON.parse(lsGet(LS_CACHE)||'null'); if(c && c.ok){ DATA=c; banner('cacheBanner','Mostrando datos guardados del '+new Date(c.generado).toLocaleString('es-AR')+' mientras se actualizan desde EcommApp…'); setStatus('', 'Datos guardados'); render(); } } catch(e){}
