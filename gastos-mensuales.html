@@ -627,8 +627,8 @@
         </div>
         <div class="fld"><label>Medio de pago</label><select class="mselect" id="pgMedio">${MEDIOS.map(([v,l])=>`<option value="${v}"${v===medio?' selected':''}>${l}</option>`).join('')}</select></div>
         <div class="fld"><label>Observación (opcional)</label><input class="minput" id="pgObs" maxlength="120" placeholder="ej. cuota 3/12, nº de operación"></div>
-        <label class="chkline"><input type="checkbox" id="pgEnviar"${esDeuda?'':' checked'}> <span>${g.PROVEEDOR_ID?`Cargar en EcommApp: <b>pago a cuenta corriente de ${esc(g.PROVEEDOR)}</b> + Salida en la caja PABLO`:'Cargar en EcommApp como Salida en la caja PABLO <span style="color:var(--warn)">(sin proveedor asignado: no va a cuenta corriente)</span>'}</span></label>
-        ${esDeuda?'<div class="note">Es un gasto de DEUDA: si la cuota ya está en cuenta corriente de EcommApp, dejalo destildado para no duplicarla.</div>':''}
+        <label class="chkline"><input type="checkbox" id="pgEnviar"${(esDeuda&&!g.PROVEEDOR_ID)?'':' checked'}> <span>${g.PROVEEDOR_ID?(esDeuda?`Cargar en EcommApp: <b>se imputa a la cuota pendiente más antigua de la deuda de ${esc(g.PROVEEDOR)}</b> (sin Salida en caja)`:`Cargar en EcommApp: <b>pago a cuenta corriente de ${esc(g.PROVEEDOR)}</b> + Salida en la caja PABLO`):'Cargar en EcommApp como Salida en la caja PABLO <span style="color:var(--warn)">(sin proveedor asignado: no va a cuenta corriente)</span>'}</span></label>
+        ${esDeuda?(g.PROVEEDOR_ID?'<div class="note">Es un gasto de DEUDA: el pago se imputa a la cuota pendiente más antigua de la deuda en EcommApp. Si el proveedor no tiene deuda en cuotas, va como pago a cuenta.</div>':'<div class="note">Es un gasto de DEUDA sin proveedor asignado: no se imputa a ninguna deuda. Asignale el proveedor desde "Proveedores" o dejalo destildado.</div>'):''}
       </div>
       <div id="pgNoPay" class="note" style="color:var(--mut)"></div>
       <div class="mact"><span class="muted" style="font-size:11.5px" id="pgHint"></span>
@@ -665,7 +665,7 @@
     const ms=document.getElementById('pgMedio'), enviar=paga&&document.getElementById('pgEnviar').checked;
     if(e==='parcial'&&!(monto>0)){ toast('Poné el monto del pago parcial.','err'); return; }
     if(enviar&&!(monto>0)){ toast('Para cargarlo en EcommApp el monto tiene que ser mayor a 0.','err'); return; }
-    if(enviar && !confirm(`Se va a cargar en EcommApp ${pg.g.PROVEEDOR_ID?'un pago a cuenta corriente de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' y la Salida en la caja PABLO':'una Salida de '+fmt(monto)+' en la caja PABLO'} (${ms.options[ms.selectedIndex].text}).\n\n${det} — ${keyLbl(key)}\n\n¿Confirmás?`)) return;
+    if(enviar && !confirm(`Se va a cargar en EcommApp ${pg.g.PROVEEDOR_ID?((String(pg.g.CLASIFICACION||'').toUpperCase()==='DEUDA'?'un pago imputado a la cuota pendiente más antigua de la deuda de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' (sin Salida en caja)':'un pago a cuenta corriente de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' y la Salida en la caja PABLO'):'una Salida de '+fmt(monto)+' en la caja PABLO'} (${ms.options[ms.selectedIndex].text}).\n\n${det} — ${keyLbl(key)}\n\n¿Confirmás?`)) return;
     if(paga) lsSet(MEDIO_KEY,ms.value);
     const btn=document.getElementById('pgSave'); btn.disabled=true; btn.textContent='Guardando…';
     try{
