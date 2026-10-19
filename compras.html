@@ -809,7 +809,7 @@ function renderCmp(){
   const series=Object.keys(acc).sort();
   const col=s=>PALETTE[series.indexOf(s)%PALETTE.length];
   const unoSolo=eje.keys.length<=1, muchos=eje.keys.length>45;
-  const ds=campo=>series.map(s=>({label:cmpSerieLbl(c.dim,s),borderColor:col(s),backgroundColor:unoSolo?col(s):col(s)+'20',tension:.3,fill:false,pointRadius:muchos?0:3,pointHoverRadius:4,borderWidth:2,spanGaps:true,
+  const ds=campo=>series.map(s=>({label:cmpSerieLbl(c.dim,s),borderColor:col(s),backgroundColor:unoSolo?col(s):col(s)+'20',tension:.3,fill:false,pointRadius:unoSolo?6:(muchos?0:3),pointHoverRadius:4,borderWidth:2,spanGaps:true,
     data:cmpValores(acc[s],eje.keys,k=>cmpFechaTramo(c.dim,c.esc,s,k,dias),c.acum,campo,null,inicio)}));
   const uni = c.tipo==='articulo'?'pares':(c.tipo==='insumo'?'unidades':'unidades (pares + insumos)');
   const tx=cmpTextos(c.dim,c.esc,c.acum);
@@ -821,8 +821,8 @@ function renderCmp(){
   document.getElementById('cmpLeg1').innerHTML=leg; document.getElementById('cmpLeg2').innerHTML=leg;
   const opts=(fmtTip,fmtEje)=>({maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.parsed.y==null?null:' '+x.dataset.label+': '+fmtTip(x.parsed.y)}}},
     scales:{x:{grid:{display:false},ticks:{autoSkip:true,maxRotation:0}},y:{beginAtZero:true,ticks:{callback:fmtEje}}}});
-  mkChart('chCmpMonto',{type:unoSolo?'bar':'line',data:{labels:eje.labels,datasets:ds('monto')},options:opts(v=>$m(v),v=>$k(v))});
-  mkChart('chCmpCant',{type:unoSolo?'bar':'line',data:{labels:eje.labels,datasets:ds('cant')},options:opts(v=>nn(v)+' '+(c.tipo==='articulo'?'pares':'u'),v=>nn(v))});
+  mkChart('chCmpMonto',{type:'line',data:{labels:eje.labels,datasets:ds('monto')},options:opts(v=>$m(v),v=>$k(v))});
+  mkChart('chCmpCant',{type:'line',data:{labels:eje.labels,datasets:ds('cant')},options:opts(v=>nn(v)+' '+(c.tipo==='articulo'?'pares':'u'),v=>nn(v))});
   // tabla resumen por serie con variación contra la anterior
   const filas=series.map(s=>{ let monto=0,cant=0; Object.values(acc[s]).forEach(b=>{monto+=b.monto;cant+=b.cant;}); return {s,monto,cant,cbs:ext[s].cbs.size,dias:ext[s].dias.size,provs:ext[s].provs.size}; });
   const conDelta=c.dim!=='temporada';

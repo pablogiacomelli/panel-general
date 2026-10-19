@@ -109,7 +109,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
         <h2 class="sec">Próximos pasos</h2>
         <div class="alert"><span class="d" style="background:var(--compras)"></span><div><b>Compras: facturas pendientes</b><small>Sumar las facturas de STAGING_COMPRAS que todavía no entraron a EcommApp</small></div></div>
         <div class="alert"><span class="d" style="background:var(--ventas)"></span><div><b>Indicadores cruzados en el Inicio</b><small>Ventas, margen, compras, gastos, stock valorizado y resultado con un solo período</small></div></div>
-        <div class="alert"><span class="d" style="background:var(--gastos)"></span><div><b>Sumar Gastos mensuales y Deudas</b><small>Hoy son archivos locales: hay que mudar lo que guardan en el navegador sin perderlo</small></div></div>
+        <div class="alert"><span class="d" style="background:var(--gastos)"></span><div><b>Sumar Deudas</b><small>Que tome los pagos de Gastos mensuales y deje de guardarlos en el navegador</small></div></div>
       </div>
     </div>
     <div class="box">
@@ -143,9 +143,9 @@ const MODS={
     secs:['Panel','Comparativas','Vendedoras','Clientas']},
   compras:{name:'Compras',color:'var(--compras)',live:true,desc:'Compras de artículos e insumos inventariables y la cuenta corriente de proveedores, en vivo desde EcommApp.',
     panels:[{name:'Compras',url:'https://pablogiacomelli.github.io/panel-general/compras.html'}],secs:['Artículos','Insumos','Cuenta corriente']},
-  gastos:{name:'Gastos',color:'var(--gastos)',live:true,desc:'Egresos e ingresos del flujo financiero y el control de cheques.',
-    panels:[{name:'Flujo Financiero',url:'https://pablogiacomelli.github.io/flujo-financiero/'},{name:'Control de Cheques',url:'https://pablogiacomelli.github.io/control-cheques/'}],
-    secs:['Flujo financiero','Cheques']},
+  gastos:{name:'Gastos',color:'var(--gastos)',live:true,desc:'Pagos de gastos mensuales (se cargan en EcommApp), egresos e ingresos del flujo financiero y el control de cheques.',
+    panels:[{name:'Gastos mensuales',url:'https://pablogiacomelli.github.io/panel-general/gastos-mensuales.html'},{name:'Flujo Financiero',url:'https://pablogiacomelli.github.io/flujo-financiero/'},{name:'Control de Cheques',url:'https://pablogiacomelli.github.io/control-cheques/'}],
+    secs:['Gastos mensuales','Flujo financiero','Cheques']},
   stock:{name:'Stock',color:'var(--stock)',live:true,desc:'Stock por artículo, temporada y color, alertas, pedidos a proveedores e insumos.',
     panels:[{name:'Stock Intelligence',url:'https://pablogiacomelli.github.io/stock-dashboard/'}],
     secs:['Panel','Resumen por temporada','Análisis de artículos','Pedidos','Insumos']}
