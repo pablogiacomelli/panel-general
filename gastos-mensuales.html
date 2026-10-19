@@ -665,7 +665,7 @@
     const ms=document.getElementById('pgMedio'), enviar=paga&&document.getElementById('pgEnviar').checked;
     if(e==='parcial'&&!(monto>0)){ toast('Poné el monto del pago parcial.','err'); return; }
     if(enviar&&!(monto>0)){ toast('Para cargarlo en EcommApp el monto tiene que ser mayor a 0.','err'); return; }
-    if(enviar && !confirm(`Se va a cargar en EcommApp ${pg.g.PROVEEDOR_ID?((String(pg.g.CLASIFICACION||'').toUpperCase()==='DEUDA'?'un pago imputado a la cuota pendiente más antigua de la deuda de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' (sin Salida en caja)':'un pago a cuenta corriente de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' y la Salida en la caja PABLO'):'una Salida de '+fmt(monto)+' en la caja PABLO'} (${ms.options[ms.selectedIndex].text}).\n\n${det} — ${keyLbl(key)}\n\n¿Confirmás?`)) return;
+    if(enviar && !confirm(`Se va a cargar en EcommApp ${pg.g.PROVEEDOR_ID?(String(pg.g.CLASIFICACION||'').toUpperCase()==='DEUDA'?'un pago imputado a la cuota pendiente más antigua de la deuda de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' (sin Salida en caja)':'un pago a cuenta corriente de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' y la Salida en la caja PABLO'):'una Salida de '+fmt(monto)+' en la caja PABLO'} (${ms.options[ms.selectedIndex].text}).\n\n${det} — ${keyLbl(key)}\n\n¿Confirmás?`)) return;
     if(paga) lsSet(MEDIO_KEY,ms.value);
     const btn=document.getElementById('pgSave'); btn.disabled=true; btn.textContent='Guardando…';
     try{
