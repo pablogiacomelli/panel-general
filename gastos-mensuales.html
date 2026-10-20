@@ -31,6 +31,8 @@
   tr.na td{opacity:.5}
   tr.na .ref{text-decoration:line-through}
   .gasto{font-weight:600;font-size:13.5px}
+  .eco{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;background:rgba(79,140,255,.16);color:#8db6ff;vertical-align:1px;cursor:help}
+  .eco.warn{background:rgba(245,182,75,.16);color:#f5b64b}
   .gasto .sub{display:block;color:var(--mut);font-size:10.5px;font-weight:500;letter-spacing:.2px;margin-top:1px}
   .ref{color:var(--mut);font-variant-numeric:tabular-nums;text-align:right}
   .st-btn{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer;min-width:120px;text-align:left;color:var(--tx)}
@@ -306,7 +308,7 @@
 
   const FALLBACK = [].map(r=>({DETALLE:r[0],MONTO:r[1],TIPO:r[2],CLASIFICACION:r[3]}));
 
-  let GASTOS=[], EVENTS=[], curTab='gastos', serverOk=false;
+  let GASTOS=[], EVENTS=[], ECO=null, curTab='gastos', serverOk=false;
   let statusMap={}, montoMap={}, cellEv={};
   const lsGet=(k)=>{try{return localStorage.getItem(k)}catch(e){return null}};
   const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -365,7 +367,7 @@
       GASTOS=FALLBACK.slice();
       msg.className='msg err'; msg.textContent='No se pudo leer la planilla en vivo ('+e.message+'). Probá ↻.';
     }
-    try{ const r=await pE; EVENTS=r.pagos||[]; serverOk=true;
+    try{ const r=await pE; EVENTS=r.pagos||[]; ECO=(r.ecommapp&&r.ecommapp.gastos)?r.ecommapp:null; serverOk=true;
       document.getElementById('syncLbl').textContent='Planilla al día · '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
     }catch(e){ serverOk=false; document.getElementById('syncLbl').textContent='⚠ No se pudieron leer los pagos ('+e.message+')'; }
     buildState(); checkMigracion(); refresh();
@@ -379,11 +381,18 @@
     return true;
   }
   const gastosDe=key=>GASTOS.filter(g=>aplica(g,key));
-  const montoOf=g=>num(g.MONTO);
-  const estadoDe=(det,key)=>statusMap[det+'||'+key]||'pendiente';
-  const pagadoDe=(det,key)=>montoMap[det+'||'+key]||0;
-  function saldoDe(g,key){const det=detOf(g),e=estadoDe(det,key); if(e==='noaplica'||e==='pagado') return 0; return Math.max(0,montoOf(g)-pagadoDe(det,key));}
-  const totalAPagar=key=>gastosDe(key).reduce((s,g)=>s+(estadoDe(detOf(g),key)==='noaplica'?0:montoOf(g)),0);
+  // EcommApp (19/10/2026): monto real y pagado por gasto y mes, si el gasto esta vinculado (data table gastos_vinculos)
+  const ecoG=det=>ECO&&ECO.gastos?ECO.gastos[det]||null:null;
+  const ecoMes=(det,key)=>{const G=ecoG(det); return G&&G.meses?G.meses[key]||null:null;};
+  const montoOf=(g,key)=>{const e=key?ecoMes(detOf(g),key):null; return e&&e.monto>0?e.monto:num(g.MONTO);};
+  function estadoDe(det,key){const s=statusMap[det+'||'+key]; if(s==='noaplica'||s==='pagado') return s; const e=ecoMes(det,key); if(e&&e.monto>0){const p=Math.max(montoMap[det+'||'+key]||0,e.pagado||0); if(p>=e.monto-1) return 'pagado'; if(p>0) return 'parcial';} return s||'pendiente';}
+  const pagadoDe=(det,key)=>{const e=ecoMes(det,key); return Math.max(montoMap[det+'||'+key]||0, e?e.pagado||0:0);};
+  function ecoItems(m){return m.items.map(it=>String(it[0]).slice(8,10)+'/'+String(it[0]).slice(5,7)+' · '+it[1]+' · '+fmt(it[2])+(it[3]>=it[2]-1?' (pagado)':it[3]>0?' (pagado '+fmt(it[3])+')':' (impago)'));}
+  function ecoChip(det,key){const G=ecoG(det); if(!G) return ''; const m=G.meses[key];
+    if(m) return `<span class="eco" title="${esc('En EcommApp ('+G.proveedor+'):\n'+ecoItems(m).join('\n'))}">EcommApp${G.modo==='auto'?' · auto':''}</span>`;
+    return key<=hoyAR().slice(0,7)?`<span class="eco warn" title="${esc('Vinculado a '+G.proveedor+', pero en EcommApp no hay nada cargado para este mes')}">sin cargar en EcommApp</span>`:'';}
+  function saldoDe(g,key){const det=detOf(g),e=estadoDe(det,key); if(e==='noaplica'||e==='pagado') return 0; return Math.max(0,montoOf(g,key)-pagadoDe(det,key));}
+  const totalAPagar=key=>gastosDe(key).reduce((s,g)=>s+(estadoDe(detOf(g),key)==='noaplica'?0:montoOf(g,key)),0);
   const pagadoMes=key=>gastosDe(key).reduce((s,g)=>s+pagadoDe(detOf(g),key),0);
   const pendienteMes=key=>Math.max(0,totalAPagar(key)-pagadoMes(key));
   function estadoCounts(key){const c={pendiente:0,pagado:0,parcial:0,noaplica:0};gastosDe(key).forEach(g=>{c[estadoDe(detOf(g),key)]++;});return c;}
@@ -428,8 +437,8 @@
       const tipo=(g.TIPO||'').toString().trim(), clas=(g.CLASIFICACION||'').toString().trim();
       const subH= tipo? `<span class="sub">${esc(tipo)}${clas?' · '+esc(clas):''}</span>`:'';
       const tr=document.createElement('tr'); if(est==='noaplica') tr.className='na';
-      tr.innerHTML=`<td class="gasto">${esc(det)}${subH}</td>`+
-        `<td class="ref">${fmt(montoOf(g))}</td>`+
+      tr.innerHTML=`<td class="gasto">${esc(det)}${ecoChip(det,key)}${subH}</td>`+
+        `<td class="ref">${fmt(montoOf(g,key))}</td>`+
         `<td><button class="st-btn st-${est}" data-det="${encodeURIComponent(det)}">${EST_ICO[est]} ${EST_LBL[est]}</button>${est==='noaplica'?`<button class="namulti" data-na="${encodeURIComponent(det)}" title="Marcar No aplica en varios meses">meses…</button>`:''}</td>`+
         `<td class="ref" style="color:var(--tx)">${pag?fmt(pag):'—'}</td>`;
       body.appendChild(tr);
@@ -480,7 +489,7 @@
   }
 
   let aDim='clas', aMeas='total';
-  function aVal(g,key){ if(!aplica(g,key)) return 0; const det=detOf(g); return aMeas==='pagado'?pagadoDe(det,key):(estadoDe(det,key)==='noaplica'?0:montoOf(g)); }
+  function aVal(g,key){ if(!aplica(g,key)) return 0; const det=detOf(g); return aMeas==='pagado'?pagadoDe(det,key):(estadoDe(det,key)==='noaplica'?0:montoOf(g,key)); }
   function aGroups(y){
     const campo=aDim==='tipo'?'TIPO':'CLASIFICACION', m={};
     GASTOS.forEach(g=>{ let v=0; for(let mm=0;mm<12;mm++) v+=aVal(g,keyOf(y,mm)); if(v<=0) return;
@@ -508,7 +517,7 @@
   }));
 
   let bkDim='clas', bkMeas='total', bkOpen=null;
-  function bkVal(g,key){ const det=detOf(g); if(bkMeas==='pagado') return pagadoDe(det,key); return estadoDe(det,key)==='noaplica'?0:montoOf(g); }
+  function bkVal(g,key){ const det=detOf(g); if(bkMeas==='pagado') return pagadoDe(det,key); return estadoDe(det,key)==='noaplica'?0:montoOf(g,key); }
   function bkGroups(key){
     const campo=bkDim==='tipo'?'TIPO':'CLASIFICACION', m={};
     gastosDe(key).forEach(g=>{
@@ -565,7 +574,7 @@
           if(f.saldos[i]===null){ h+='<td></td>'; return; }
           const fut=!cuenta(k);
           const est=estadoDe(det,k), pag=pagadoDe(det,k);
-          let sub = est==='pendiente'?fmtK(montoOf(f.g)) : est==='parcial'?'debe '+fmtK(f.saldos[i]) : est==='pagado'?fmtK(pag) : '';
+          let sub = est==='pendiente'?fmtK(montoOf(f.g,k)) : est==='parcial'?'debe '+fmtK(f.saldos[i]) : est==='pagado'?fmtK(pag) : '';
           h+=`<td${fut?' class="fut"':''}><button class="cell st-${est}" data-det="${encodeURIComponent(det)}" data-k="${k}">${EST_LBL[est]==='Pago parcial'?'Parcial':EST_LBL[est]}${sub?`<small>${sub}</small>`:''}</button></td>`;
         });
         h+=`<td class="dcol${f.deuda>0?' pos':''}">${f.deuda?fmt(f.deuda):'—'}</td></tr>`;
@@ -610,7 +619,7 @@
     renderPago();
   }
   function renderPago(){
-    const {det,key,g}=pg, ref=montoOf(g), pag=pagadoDe(det,key), estAct=estadoDe(det,key);
+    const {det,key,g}=pg, ref=montoOf(g,key), pag=pagadoDe(det,key), estAct=estadoDe(det,key);
     const saldo=Math.max(0,ref-pag), esDeuda=String(g.CLASIFICACION||'').toUpperCase()==='DEUDA';
     const medio=lsGet(MEDIO_KEY)||'8';
     const evs=(cellEv[det+'||'+key]||[]).slice().reverse();
@@ -638,6 +647,11 @@
           <span class="hm">${num(e.MONTO)?fmt(num(e.MONTO)):''} <button class="anul" data-id="${esc(e.ID)}">anular</button></span></div>`).join('')}</div>`:''}
     </div>`;
     bg.style.display='flex';
+    { const G=ecoG(det), m=ecoMes(det,key);
+      if(G){ const box=document.createElement('div'); box.className='note'; box.style.margin='0 0 10px';
+        box.innerHTML='<b>En EcommApp</b> · '+esc(G.proveedor)+' · actualizado '+esc(ECO.actualizado||'')+'<br>'+(m?ecoItems(m).map(esc).join('<br>'):'<span style="color:var(--warn)">No hay nada cargado en EcommApp para este mes.</span>');
+        bg.querySelector('.refbox').after(box);
+        if(G.modo==='auto'){ const ch=document.getElementById('pgEnviar'); if(ch){ ch.checked=false; ch.disabled=true; const sp=ch.parentElement.querySelector('span'); if(sp) sp.innerHTML='No se carga desde acá: <b>este gasto lo carga en EcommApp otro proceso</b> (panel de ARCA o la compra misma). El estado se toma de EcommApp.'; } } } }
     const setEst=e=>{ pg.estado=e;
       bg.querySelectorAll('#pgEst button').forEach(b=>b.classList.toggle('on',b.dataset.e===e));
       const paga=(e==='pagado'||e==='parcial');
