@@ -40,6 +40,10 @@
   .st-pagado{background:rgba(63,208,138,.20);border-color:var(--ok);color:#9ff0c6}
   .st-parcial{background:rgba(245,182,75,.18);border-color:var(--warn);color:#ffd98a}
   .st-noaplica{background:rgba(147,160,187,.10);border-color:#3a4463;color:#8794ad}
+  #tbl tr.grp td{background:var(--card2);font-weight:700;font-size:12.5px;border-top:2px solid var(--line)}
+  #tbl tr.grp td .sub{color:var(--mut);font-weight:500;font-size:11px;margin-left:6px}
+  .grpsum{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin:-4px 0 12px}
+  .grpsum b{color:var(--tx);font-variant-numeric:tabular-nums}
   tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:none;background:var(--card)}
   .tot-lbl{text-align:right;color:var(--mut);font-weight:600}
   .sums{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin:2px 0 12px}
@@ -218,6 +222,7 @@
       <span>Pagado <b id="totPag">$0</b></span>
       <span>Pendiente <b id="totPend">$0</b></span>
     </div>
+    <div class="grpsum" id="grpSum"></div>
     <div id="msg" class="msg">Cargando gastos desde la planilla…</div>
     <table id="tbl" hidden>
       <thead><tr>
@@ -247,7 +252,7 @@
         <div class="bk-head">
           <h3>Desglose de gastos (mes)</h3>
           <div class="bk-ctrls">
-            <div class="seg" id="segDim"><button data-dim="clas" class="on">Subcategoría</button><button data-dim="tipo">Categoría</button></div>
+            <div class="seg" id="segDim"><button data-dim="clas" class="on">Subcategoría</button><button data-dim="tipo">Categoría</button><button data-dim="grupo">Fijo / Variable</button></div>
             <div class="seg" id="segMeas"><button data-meas="total" class="on">Totales</button><button data-meas="pagado">Pagados</button></div>
           </div>
         </div>
@@ -257,7 +262,7 @@
         <div class="bk-head">
           <h3>Resumen anual <span id="anioLbl2"></span></h3>
           <div class="bk-ctrls">
-            <div class="seg" id="aSegDim"><button data-dim="clas" class="on">Subcategoría</button><button data-dim="tipo">Categoría</button></div>
+            <div class="seg" id="aSegDim"><button data-dim="clas" class="on">Subcategoría</button><button data-dim="tipo">Categoría</button><button data-dim="grupo">Fijo / Variable</button></div>
             <div class="seg" id="aSegMeas"><button data-meas="total" class="on">Totales</button><button data-meas="pagado">Pagados</button></div>
           </div>
         </div>
@@ -381,6 +386,13 @@
     return true;
   }
   const gastosDe=key=>GASTOS.filter(g=>aplica(g,key));
+  // 21/10/2026 (Pablo): grupo FIJO / VARIABLE / EVENTUAL (columna GRUPO de GASTOS MENSUALES).
+  // Creditos y planes (CLASIFICACION DEUDA) son fijos, con subtotal aparte "por deudas". Sin GRUPO: unico -> eventual, si no fijo.
+  const GRUPOS=['FIJO','VARIABLE','EVENTUAL'];
+  const SECCIONES=[{k:'FIJO_OP',n:'Fijos · operativos'},{k:'FIJO_DEU',n:'Fijos · por deudas'},{k:'VARIABLE',n:'Variables'},{k:'EVENTUAL',n:'Eventuales'}];
+  const grupoDe=g=>{const v=String(g.GRUPO||'').trim().toUpperCase(); if(GRUPOS.includes(v)) return v; return String(g.UNICO||'').trim().toUpperCase()==='SI'?'EVENTUAL':'FIJO';};
+  const seccionDe=g=>{const gr=grupoDe(g); return gr!=='FIJO'?gr:(String(g.CLASIFICACION||'').trim().toUpperCase()==='DEUDA'?'FIJO_DEU':'FIJO_OP');};
+  const seccionLbl=g=>SECCIONES.find(s=>s.k===seccionDe(g)).n;
   // EcommApp (19/10/2026): monto real y pagado por gasto y mes, si el gasto esta vinculado (data table gastos_vinculos)
   const ecoG=det=>ECO&&ECO.gastos?ECO.gastos[det]||null:null;
   const ecoMes=(det,key)=>{const G=ecoG(det); return G&&G.meses?G.meses[key]||null:null;};
@@ -432,7 +444,14 @@
     const {key}=curPeriod();
     document.getElementById('tbl').hidden=false;
     const body=document.getElementById('body'); body.innerHTML='';
-    gastosDe(key).forEach(g=>{
+    const gs=gastosDe(key);
+    SECCIONES.forEach(sec=>{
+      const lista=gs.filter(g=>seccionDe(g)===sec.k); if(!lista.length) return;
+      const tot=lista.reduce((s,g)=>s+(estadoDe(detOf(g),key)==='noaplica'?0:montoOf(g,key)),0), pg=lista.reduce((s,g)=>s+pagadoDe(detOf(g),key),0);
+      const th=document.createElement('tr'); th.className='grp';
+      th.innerHTML=`<td>${esc(sec.n)}<span class="sub">${lista.length} gasto${lista.length===1?'':'s'}</span></td><td class="ref">${fmt(tot)}</td><td class="ref" style="text-align:left">pagado</td><td class="ref">${pg?fmt(pg):'—'}</td>`;
+      body.appendChild(th);
+    lista.forEach(g=>{
       const det=detOf(g), est=estadoDe(det,key), pag=pagadoDe(det,key);
       const tipo=(g.TIPO||'').toString().trim(), clas=(g.CLASIFICACION||'').toString().trim();
       const subH= tipo? `<span class="sub">${esc(tipo)}${clas?' · '+esc(clas):''}</span>`:'';
@@ -442,6 +461,7 @@
         `<td><button class="st-btn st-${est}" data-det="${encodeURIComponent(det)}">${EST_ICO[est]} ${EST_LBL[est]}</button>${est==='noaplica'?`<button class="namulti" data-na="${encodeURIComponent(det)}" title="Marcar No aplica en varios meses">meses…</button>`:''}</td>`+
         `<td class="ref" style="color:var(--tx)">${pag?fmt(pag):'—'}</td>`;
       body.appendChild(tr);
+    });
     });
     body.querySelectorAll('button.st-btn').forEach(b=>b.addEventListener('click',()=>openPago(decodeURIComponent(b.dataset.det),curPeriod().key)));
     body.querySelectorAll('button.namulti').forEach(b=>b.addEventListener('click',()=>openNaModal(decodeURIComponent(b.dataset.na))));
@@ -456,6 +476,10 @@
     document.getElementById('totPag').textContent=fmt(tPag);
     document.getElementById('totPend').textContent=fmt(tPend);
     document.getElementById('footPag').textContent=fmt(tPag);
+    const porSec={}; gastosDe(key).forEach(g=>{ const s=seccionDe(g); porSec[s]=(porSec[s]||0)+(estadoDe(detOf(g),key)==='noaplica'?0:montoOf(g,key)); });
+    const fijos=(porSec.FIJO_OP||0)+(porSec.FIJO_DEU||0), pct=v=>tPagar?' ('+Math.round(v/tPagar*100)+'%)':'';
+    document.getElementById('grpSum').innerHTML=`<span>Fijos <b>${fmt(fijos)}</b>${pct(fijos)}: operativos ${fmt(porSec.FIJO_OP||0)} · por deudas ${fmt(porSec.FIJO_DEU||0)}</span>`+
+      `<span>Variables <b>${fmt(porSec.VARIABLE||0)}</b>${pct(porSec.VARIABLE||0)}</span><span>Eventuales <b>${fmt(porSec.EVENTUAL||0)}</b>${pct(porSec.EVENTUAL||0)}</span>`;
   }
 
   /* ---------- pestaña 2: informe ---------- */
@@ -493,7 +517,7 @@
   function aGroups(y){
     const campo=aDim==='tipo'?'TIPO':'CLASIFICACION', m={};
     GASTOS.forEach(g=>{ let v=0; for(let mm=0;mm<12;mm++) v+=aVal(g,keyOf(y,mm)); if(v<=0) return;
-      const k=(g[campo]||'—').toString().trim()||'—'; (m[k]=m[k]||{name:k,total:0}); m[k].total+=v; });
+      const k=aDim==='grupo'?seccionLbl(g):((g[campo]||'—').toString().trim()||'—'); (m[k]=m[k]||{name:k,total:0}); m[k].total+=v; });
     return Object.values(m).sort((a,b)=>b.total-a.total);
   }
   function renderAnual(){
@@ -522,7 +546,7 @@
     const campo=bkDim==='tipo'?'TIPO':'CLASIFICACION', m={};
     gastosDe(key).forEach(g=>{
       const v=bkVal(g,key); if(v<=0) return;
-      const k=(g[campo]||'—').toString().trim()||'—';
+      const k=bkDim==='grupo'?seccionLbl(g):((g[campo]||'—').toString().trim()||'—');
       (m[k]=m[k]||{name:k,total:0,items:[]}); m[k].total+=v; m[k].items.push({d:detOf(g),m:v});
     });
     return Object.values(m).map(x=>({name:x.name,total:x.total,items:x.items.sort((a,b)=>b.m-a.m)})).sort((a,b)=>b.total-a.total);
@@ -722,6 +746,7 @@
         <div class="fld"><label>Categoría (tipo)</label><input class="minput" id="ngTipo" list="ngTipos" style="text-transform:uppercase"><datalist id="ngTipos">${tipos.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></div>
         <div class="fld"><label>Subcategoría</label><input class="minput" id="ngClas" list="ngClases" style="text-transform:uppercase"><datalist id="ngClases">${clas.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></div>
       </div>
+      <div class="fld"><label>Grupo</label><select class="mselect" id="ngGrupo"><option value="FIJO">Fijo — se paga todos los meses</option><option value="VARIABLE">Variable — depende de las ventas o de lo que se decida invertir</option><option value="EVENTUAL">Eventual — no se repite</option></select></div>
       <div class="fld"><label>Proveedor en EcommApp</label><select class="mselect" id="ngProv"><option value="">Cargando proveedores…</option></select></div>
       <label class="chkline"><input type="radio" name="ngTipoG" value="mensual" checked> <span><b>Gasto mensual</b> — aparece todos los meses desde el mes elegido</span></label>
       <label class="chkline"><input type="radio" name="ngTipoG" value="unico"> <span><b>Solo ese mes</b> — gasto puntual, no se repite</span></label>
@@ -730,6 +755,7 @@
     bg.style.display='flex';
     cargarProveedores().then(()=>{ const sp=document.getElementById('ngProv'); if(sp) sp.innerHTML=provOptions(''); }).catch(()=>{ const sp=document.getElementById('ngProv'); if(sp) sp.innerHTML='<option value="">(no se pudo leer EcommApp)</option>'; });
     const mi=document.getElementById('ngMonto'); mi.addEventListener('blur',()=>{ if(mi.value.trim()) mi.value=Math.round(num(mi.value)).toLocaleString('es-AR'); });
+    bg.querySelectorAll('input[name=ngTipoG]').forEach(r=>r.addEventListener('change',()=>{ document.getElementById('ngGrupo').value=r.value==='unico'?'EVENTUAL':'FIJO'; }));
     document.getElementById('ngCancel').onclick=()=>bg.style.display='none';
     document.getElementById('ngSave').onclick=async()=>{
       const det=document.getElementById('ngDet').value.trim().toUpperCase(), monto=num(mi.value);
@@ -738,8 +764,8 @@
       if(GASTOS.some(g=>detOf(g).toUpperCase()===det)){ toast('Ya existe un gasto con ese detalle.','err'); return; }
       const b=document.getElementById('ngSave'); b.disabled=true; b.textContent='Agregando…';
       try{
-        const r=await api({accion:'nuevo_gasto',detalle:det,monto,tipo:document.getElementById('ngTipo').value,clasificacion:document.getElementById('ngClas').value,alta,unico,proveedor_id:document.getElementById('ngProv').value,proveedor:provNombre(document.getElementById('ngProv').value)});
-        GASTOS.push(r.gasto); bg.style.display='none'; refresh();
+        const r=await api({accion:'nuevo_gasto',detalle:det,monto,tipo:document.getElementById('ngTipo').value,clasificacion:document.getElementById('ngClas').value,alta,unico,grupo:document.getElementById('ngGrupo').value,proveedor_id:document.getElementById('ngProv').value,proveedor:provNombre(document.getElementById('ngProv').value)});
+        GASTOS.push(Object.assign({GRUPO:document.getElementById('ngGrupo').value},r.gasto)); bg.style.display='none'; refresh();
         toast(`✅ ${det} agregado a la planilla${unico?' (solo '+keyLbl(alta)+')':' desde '+keyLbl(alta)}.`,'ok');
       }catch(err){ toast('No se pudo agregar: '+err.message,'err'); b.disabled=false; b.textContent='Agregar'; }
     };
