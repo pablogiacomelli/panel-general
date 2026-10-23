@@ -193,7 +193,7 @@
 <div class="wrap">
   <header>
     <h1>Gastos Mensuales — MAHRA / ARJE <button class="salir" id="btnSalir" title="Cerrar sesión">Salir</button></h1>
-    <p>Lista leída en vivo de la hoja GASTOS MENSUALES. Cada pago se guarda en la hoja PAGOS GASTOS DETALLADOS y, si lo elegís, se carga como Salida en la caja PABLO de EcommApp.</p>
+    <p>Lista leída en vivo de la hoja GASTOS MENSUALES. Cada pago se guarda en la hoja PAGOS GASTOS DETALLADOS y, si lo elegís, se carga en EcommApp: en la cuenta corriente del proveedor y, solo si se paga en Contado, también en la caja PABLO.</p>
   </header>
 
   <div class="periodbar">
@@ -351,8 +351,9 @@
     EVENTS.filter(e=>e.ESTADO!=='anulado'&&!anulados.has(String(e.ID))).sort((a,b)=>evNum(a)-evNum(b)).forEach(e=>{
       const k=String(e.DETALLE).trim()+'||'+e.PERIODO;
       (cellEv[k]=cellEv[k]||[]).push(e);
-      statusMap[k]=e.ESTADO;
-      const m=num(e.MONTO); if(m) montoMap[k]=(montoMap[k]||0)+m;
+      const m=num(e.MONTO);
+      if(m||!num(e.INTERESES)) statusMap[k]=e.ESTADO; // un pago de solo intereses no cambia el estado del mes
+      if(m) montoMap[k]=(montoMap[k]||0)+m;
     });
   }
 
@@ -658,16 +659,18 @@
           <div class="fld"><label>Monto que pagás</label><input class="minput" id="pgMonto" inputmode="decimal" placeholder="0"></div>
           <div class="fld"><label>Fecha de pago</label><input class="minput" type="date" id="pgFecha" value="${hoyAR()}"></div>
         </div>
+        ${g.PROVEEDOR_ID?`<div class="fld"><label>Intereses (opcional)</label><input class="minput" id="pgInt" inputmode="decimal" placeholder="0">
+          <div class="muted" style="font-size:11.5px;margin-top:3px">Van aparte del monto: en la cta cte de ${esc(g.PROVEEDOR)} se carga una deuda de intereses y un pago imputado a esa deuda, con la misma fecha y medio. Si es Contado, también salen de la caja PABLO.</div></div>`:''}
         <div class="fld"><label>Medio de pago</label><select class="mselect" id="pgMedio">${MEDIOS.map(([v,l])=>`<option value="${v}"${v===medio?' selected':''}>${l}</option>`).join('')}</select></div>
         <div class="fld"><label>Observación (opcional)</label><input class="minput" id="pgObs" maxlength="120" placeholder="ej. cuota 3/12, nº de operación"></div>
-        <label class="chkline"><input type="checkbox" id="pgEnviar"${(esDeuda&&!g.PROVEEDOR_ID)?'':' checked'}> <span>${g.PROVEEDOR_ID?(esDeuda?`Cargar en EcommApp: <b>se imputa a la cuota pendiente más antigua de la deuda de ${esc(g.PROVEEDOR)}</b> (sin Salida en caja)`:`Cargar en EcommApp: <b>pago a cuenta corriente de ${esc(g.PROVEEDOR)}</b> + Salida en la caja PABLO`):'Cargar en EcommApp como Salida en la caja PABLO <span style="color:var(--warn)">(sin proveedor asignado: no va a cuenta corriente)</span>'}</span></label>
+        <label class="chkline"><input type="checkbox" id="pgEnviar"${(esDeuda&&!g.PROVEEDOR_ID)?'':' checked'}> <span>${g.PROVEEDOR_ID?`Cargar en EcommApp: <b>pago en la cuenta corriente de ${esc(g.PROVEEDOR)}</b>, imputado al comprobante del mes. <span style="color:var(--mut)">Solo si el medio es Contado sale también de la caja PABLO.</span>`:'Cargar en EcommApp como Salida en la caja PABLO <span style="color:var(--warn)">(sin proveedor asignado: solo se carga si el medio es Contado)</span>'}</span></label>
         ${esDeuda?(g.PROVEEDOR_ID?'<div class="note">Es un gasto de DEUDA: el pago se imputa a la cuota pendiente más antigua de la deuda en EcommApp. Si el proveedor no tiene deuda en cuotas, va como pago a cuenta. Si pagás más que la cuota, la diferencia se carga aparte como INTERESES ADICIONALES del préstamo.</div>':'<div class="note">Es un gasto de DEUDA sin proveedor asignado: no se imputa a ninguna deuda. Asignale el proveedor desde "Proveedores" o dejalo destildado.</div>'):''}
       </div>
       <div id="pgNoPay" class="note" style="color:var(--mut)"></div>
       <div class="mact"><span class="muted" style="font-size:11.5px" id="pgHint"></span>
         <span><button class="btn" id="pgCancel">Cerrar</button> <button class="btn primary" id="pgSave">Guardar</button></span></div>
       ${evs.length?`<div class="hist"><h4>Movimientos de este mes</h4>${evs.map(e=>`<div class="hrow"><span class="hd">${esc(String(e.FECHA_PAGO||'').slice(8,10)+'/'+String(e.FECHA_PAGO||'').slice(5,7))} · ${EST_LBL[e.ESTADO]||e.ESTADO}${e.MEDIO?' · '+esc(e.MEDIO):''}${e.OBS?' · '+esc(e.OBS):''}
-          ${e.CC_ID?`<span class="tag ok">cta cte #${esc(e.CC_ID)}</span>`:''}${e.MOV_ID?`<span class="tag ok">caja #${esc(e.MOV_ID)}</span>`:String(e.ECOMMAPP||'').startsWith('ERROR')?`<span class="tag err" title="${esc(e.ECOMMAPP)}">error EcommApp</span>`:String(e.ECOMMAPP||'').startsWith('cargado')?'<span class="tag ok">en caja</span>':''}</span>
+          ${num(e.INTERESES)?`<span class="tag">+ intereses ${fmt(num(e.INTERESES))}</span>`:''}${e.CC_ID?`<span class="tag ok">cta cte #${esc(e.CC_ID)}</span>`:''}${e.MOV_ID?`<span class="tag ok">caja #${esc(e.MOV_ID)}</span>`:String(e.ECOMMAPP||'').startsWith('ERROR')?`<span class="tag err" title="${esc(e.ECOMMAPP)}">error EcommApp</span>`:String(e.ECOMMAPP||'').startsWith('cargado')?'<span class="tag ok">en caja</span>':''}</span>
           <span class="hm">${num(e.MONTO)?fmt(num(e.MONTO)):''} <button class="anul" data-id="${esc(e.ID)}">anular</button></span></div>`).join('')}</div>`:''}
     </div>`;
     bg.style.display='flex';
@@ -692,6 +695,8 @@
     const mi=document.getElementById('pgMonto');
     mi.addEventListener('input',()=>{mi.dataset.touched='1';});
     mi.addEventListener('blur',()=>{ if(mi.value.trim()) mi.value=Math.round(num(mi.value)).toLocaleString('es-AR'); });
+    const ii=document.getElementById('pgInt');
+    if(ii) ii.addEventListener('blur',()=>{ if(ii.value.trim()) ii.value=(Math.round(num(ii.value)*100)/100).toLocaleString('es-AR'); });
     setEst(pg.estado);
     document.getElementById('pgCancel').onclick=()=>bg.style.display='none';
     document.getElementById('pgSave').onclick=savePago;
@@ -701,30 +706,36 @@
     const {det,key}=pg, e=pg.estado, paga=(e==='pagado'||e==='parcial');
     const monto=paga?num(document.getElementById('pgMonto').value):0;
     const ms=document.getElementById('pgMedio'), enviar=paga&&document.getElementById('pgEnviar').checked;
-    if(e==='parcial'&&!(monto>0)){ toast('Poné el monto del pago parcial.','err'); return; }
-    if(enviar&&!(monto>0)){ toast('Para cargarlo en EcommApp el monto tiene que ser mayor a 0.','err'); return; }
-    if(enviar && !confirm(`Se va a cargar en EcommApp ${pg.g.PROVEEDOR_ID?(String(pg.g.CLASIFICACION||'').toUpperCase()==='DEUDA'?'un pago imputado a la cuota pendiente más antigua de la deuda de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' (sin Salida en caja)':'un pago a cuenta corriente de '+pg.g.PROVEEDOR+' por '+fmt(monto)+' y la Salida en la caja PABLO'):'una Salida de '+fmt(monto)+' en la caja PABLO'} (${ms.options[ms.selectedIndex].text}).\n\n${det} — ${keyLbl(key)}\n\n¿Confirmás?`)) return;
+    const iiEl=document.getElementById('pgInt'), intereses=(paga&&iiEl)?Math.round(num(iiEl.value)*100)/100:0;
+    if(e==='parcial'&&!(monto>0)&&!(intereses>0)){ toast('Poné el monto del pago parcial.','err'); return; }
+    if(enviar&&!(monto>0)&&!(intereses>0)){ toast('Para cargarlo en EcommApp el monto tiene que ser mayor a 0.','err'); return; }
+    if(intereses>0&&!enviar){ toast('Los intereses solo se registran cargándolos en EcommApp: tildá "Cargar en EcommApp".','err'); return; }
+    if(intereses>0&&!(monto>0)){ toast('Los intereses van junto con un pago del gasto: poné también el monto que pagás.','err'); return; }
+    const conCaja=ms.value==='1';
+    const txtInt=intereses>0?`\n+ intereses ${fmt(intereses)}: deuda de intereses y pago imputado a esa deuda en la cta cte de ${pg.g.PROVEEDOR}${conCaja?' (y Salida en la caja PABLO)':''}`:'';
+    if(enviar && !confirm(`Se va a cargar en EcommApp ${pg.g.PROVEEDOR_ID?(monto>0?'un pago en la cuenta corriente de '+pg.g.PROVEEDOR+' por '+fmt(monto)+(conCaja?' y la Salida en la caja PABLO (es Contado)':' (sin caja: no es Contado)'):'solo los intereses (sin pago del gasto)'):(conCaja?'una Salida de '+fmt(monto)+' en la caja PABLO':'NADA: sin proveedor solo se carga si es Contado')}${txtInt} (${ms.options[ms.selectedIndex].text}).\n\n${det} — ${keyLbl(key)}\n\n¿Confirmás?`)) return;
     if(paga) lsSet(MEDIO_KEY,ms.value);
     const btn=document.getElementById('pgSave'); btn.disabled=true; btn.textContent='Guardando…';
     try{
-      const r=await api({accion:'pago',items:[{detalle:det,periodo:key,estado:e,monto,enviar,
+      const r=await api({accion:'pago',items:[{detalle:det,periodo:key,estado:e,monto,intereses,enviar,
         proveedor_id:pg.g.PROVEEDOR_ID||'',proveedor:pg.g.PROVEEDOR||'',
         medio:paga?ms.options[ms.selectedIndex].text:'',medio_id:paga?ms.value:'',fecha_pago:paga?document.getElementById('pgFecha').value:hoyAR(),obs:paga?document.getElementById('pgObs').value.trim():''}]});
       const ev=(r.eventos||[])[0]||{};
       EVENTS.push(ev); buildState(); refresh();
       document.getElementById('pgBg').style.display='none';
       if(String(ev.ECOMMAPP||'').startsWith('ERROR')) toast('Guardado en la planilla, pero EcommApp dio error: '+ev.ECOMMAPP.slice(7)+'. Cargalo a mano o probá de nuevo.','err');
-      else if(String(ev.ECOMMAPP||'').startsWith('pago a cta cte')) toast(`✅ ${fmt(monto)}: pago a cta cte de ${ev.PROVEEDOR}${ev.CC_ID?' (#'+ev.CC_ID+')':''} + caja PABLO${ev.MOV_ID?' (mov '+ev.MOV_ID+')':''}.`,'ok');
+      else if(/^(pago a cta cte|imputado|solo intereses)/.test(String(ev.ECOMMAPP||''))) toast(`✅ ${fmt(monto+intereses)}: ${ev.ECOMMAPP}${ev.MOV_ID?' · caja mov '+ev.MOV_ID:''}.`,'ok');
       else if(String(ev.ECOMMAPP||'').startsWith('cargado')) toast(`✅ ${fmt(monto)} cargado en caja PABLO${ev.MOV_ID?' · mov '+ev.MOV_ID:''} y en la planilla.`,'ok');
       else toast('✅ Guardado en la planilla.','ok');
     }catch(err){ toast('No se pudo guardar: '+err.message,'err'); btn.disabled=false; btn.textContent='Guardar'; }
   }
   async function anularEv(id){
     const ev=EVENTS.find(e=>String(e.ID)===String(id)); if(!ev) return;
-    const txt=(ev.MOV_ID||ev.CC_ID)?`Se anula este movimiento y se BORRA de EcommApp${ev.CC_ID?' (cta cte #'+ev.CC_ID+')':''}${ev.MOV_ID?' (caja mov '+ev.MOV_ID+')':''}.${String(ev.ECOMMAPP||'').startsWith('pago a cta cte')&&!ev.CC_ID?' OJO: el pago de cta cte no tiene número, borralo a mano.':''}`:(String(ev.ECOMMAPP||'').startsWith('cargado')?'Se anula en la planilla. OJO: no tengo el número de movimiento de EcommApp, borralo a mano de la caja.':'Se anula en la planilla.');
+    const txt=(ev.MOV_ID||ev.CC_ID||ev.INT_CC_ID||ev.INT_MOV_ID)?`Se anula este movimiento y se BORRA de EcommApp${ev.CC_ID?' (cta cte #'+ev.CC_ID+')':''}${ev.MOV_ID?' (caja mov '+ev.MOV_ID+')':''}${num(ev.INTERESES)?' y los intereses ('+fmt(num(ev.INTERESES))+': deuda y pago'+(ev.INT_MOV_ID?' y caja':'')+')':''}.${String(ev.ECOMMAPP||'').startsWith('pago a cta cte')&&!ev.CC_ID?' OJO: el pago de cta cte no tiene número, borralo a mano.':''}`:(String(ev.ECOMMAPP||'').startsWith('cargado')?'Se anula en la planilla. OJO: no tengo el número de movimiento de EcommApp, borralo a mano de la caja.':'Se anula en la planilla.');
     if(!confirm(txt+'\n\n¿Confirmás?')) return;
     try{
-      const r=await api({accion:'anular',items:[{detalle:ev.DETALLE,periodo:ev.PERIODO,ref:ev.ID,mov_id:ev.MOV_ID||'',cc_id:ev.CC_ID||''}]});
+      const r=await api({accion:'anular',items:[{detalle:ev.DETALLE,periodo:ev.PERIODO,ref:ev.ID,mov_id:ev.MOV_ID||'',cc_id:ev.CC_ID||'',
+        int_cc_id:ev.INT_CC_ID||'',int_mov_id:ev.INT_MOV_ID||'',proveedor_id:ev.PROVEEDOR_ID||'',proveedor:ev.PROVEEDOR||''}]});
       const a=(r.eventos||[])[0]||{}; EVENTS.push(a); buildState(); refresh(); renderPago();
       toast(String(a.ECOMMAPP||'').startsWith('ERROR')?'Anulado en la planilla, pero EcommApp dio error: '+a.ECOMMAPP:'✅ Anulado'+(String(a.ECOMMAPP||'').indexOf('borrado')>=0?' y '+a.ECOMMAPP+'.':'.'),String(a.ECOMMAPP||'').startsWith('ERROR')?'err':'ok');
     }catch(err){ toast('No se pudo anular: '+err.message,'err'); }
@@ -790,7 +801,7 @@
     const filas=GASTOS.slice().sort((a,b)=>String(a.TIPO||'').localeCompare(String(b.TIPO||''))||detOf(a).localeCompare(detOf(b)));
     bg.innerHTML=`<div class="modal" style="max-width:820px">
       <h3>Proveedores de cada gasto</h3>
-      <p class="msub">El pago de un gasto con proveedor se registra como <b>pago a cuenta corriente</b> de ese proveedor en EcommApp, además de la Salida en la caja PABLO. Los marcados <span style="color:var(--warn)">sugerido</span> son mi propuesta: revisalos antes de guardar.</p>
+      <p class="msub">El pago de un gasto con proveedor se registra como <b>pago a cuenta corriente</b> de ese proveedor en EcommApp (a la caja PABLO va solo lo pagado en Contado). Los marcados <span style="color:var(--warn)">sugerido</span> son mi propuesta: revisalos antes de guardar.</p>
       <div style="max-height:58vh;overflow:auto;border:1px solid var(--line);border-radius:10px">
       <table style="font-size:12.5px"><tbody>${filas.map(g=>{const det=detOf(g), guardado=String(g.PROVEEDOR_ID||''), sug=guardado?'':sugeridoDe(det);
         return `<tr><td style="width:46%"><b>${esc(det)}</b><span class="muted" style="display:block;font-size:10.5px">${esc(g.TIPO||'')}</span></td>
