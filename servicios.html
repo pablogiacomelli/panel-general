@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="https://pablogiacomelli.github.io/panel-general/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>MAHRA · Servicios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{color-scheme:dark;--bg:#0f0f0d;--surface:#171714;--surface2:#1e1e1a;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--text:#f0ede8;--soft:#c9c5bd;--muted:#9a9690;--acc:#c9a0dc;--bad:#e8806f;--good:#8fbe9e;--warn:#d4a853;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--display:'Fraunces',Georgia,serif;--body:'DM Sans',-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,monospace}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;font-size:14px;line-height:1.5}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--acc)}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 32px 56px;display:flex;flex-direction:column;gap:28px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:300;font-size:28px;line-height:1.2}
+h1 em{color:var(--acc);font-style:italic}
+.sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px}
+.acciones{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{background:transparent;border:1px solid var(--border2);padding:9px 14px;font-family:var(--mono);font-size:12px;color:var(--soft);min-height:40px;text-decoration:none;display:inline-flex;align-items:center}
+.btn:hover{color:var(--text);border-color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,.pill:focus-visible,.card:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn.prim{border-color:var(--acc);color:var(--acc)}
+.pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pill{font-family:var(--mono);font-size:12px;padding:8px 12px;background:transparent;border:1px solid var(--border2);color:var(--muted);min-height:38px;border-radius:3px;display:inline-flex;align-items:center;gap:7px}
+.pill:hover{color:var(--text)}
+.pill.on{background:var(--acc);border-color:var(--acc);color:#0f0f0d;font-weight:500}
+.dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
+.aviso{border:1px solid rgba(232,128,111,.5);background:rgba(232,128,111,.08);padding:12px 14px;font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--border);padding:18px 20px;min-width:0}
+.kpi .lb{font-size:12.5px;color:var(--muted)}
+.kpi .v{font-family:var(--display);font-weight:300;font-size:30px;line-height:1.2;margin:6px 0 4px;overflow-wrap:anywhere}
+.kpi .v.bad{color:var(--bad)}
+.kpi .d{font-size:12.5px;color:var(--soft)}
+h2{font-family:var(--display);font-weight:300;font-size:20px}
+section>.cab{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.nota{font-size:12.5px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);padding:16px 18px;text-align:left;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card:hover{border-color:var(--border2)}
+.card.on{border-color:var(--acc)}
+.card .t{display:flex;align-items:center;gap:8px;font-size:15px}
+.card .dir{font-size:12.5px;color:var(--muted)}
+.card .m{font-size:13px;color:var(--soft)}
+.est{font-family:var(--mono);font-size:11.5px;display:inline-flex;gap:5px;align-items:center;white-space:nowrap}
+.est.bad{color:var(--bad)}.est.good{color:var(--good)}.est.warn{color:var(--warn)}.est.neu{color:var(--muted)}
+.box{background:var(--surface);border:1px solid var(--border);padding:4px 0}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+th{text-align:left;font-weight:400;font-size:11.5px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border2);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--soft);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+td.f{font-family:var(--mono);white-space:nowrap}
+td b{font-weight:500;color:var(--text)}
+tfoot td{border-top:1px solid var(--border2);border-bottom:none;color:var(--text);font-weight:500}
+details{border-top:1px solid var(--border)}
+summary{padding:12px 14px;cursor:pointer;font-size:13px;color:var(--soft)}
+summary:hover{color:var(--text)}
+.link{background:none;border:none;color:var(--acc);font-family:var(--mono);font-size:12px;padding:4px 0;min-height:28px;text-decoration:underline}
+.link:disabled{color:var(--muted);text-decoration:none}
+.graf{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));gap:12px}
+.gbox{background:var(--surface);border:1px solid var(--border);padding:16px 18px;min-width:0;position:relative}
+.gbox h3{font-weight:400;font-size:14px;margin-bottom:10px}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--soft);margin-bottom:6px}
+.leg span{display:inline-flex;align-items:center;gap:6px}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.tip{position:absolute;z-index:5;pointer-events:none;background:#0b0b09;border:1px solid var(--border2);padding:8px 10px;font-size:12px;min-width:170px;display:none}
+.tip b{font-weight:500;display:block;margin-bottom:4px}
+.tip div{display:flex;justify-content:space-between;gap:14px;color:var(--soft)}
+.tip div span:last-child{font-family:var(--mono);color:var(--text)}
+.mas{padding:10px 14px}
+.cargando{padding:48px 0;color:var(--muted);text-align:center}
+@media(max-width:700px){.wrap{padding:16px 16px 40px}.kpi .v{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>MAHRA · <em>Servicios</em></h1>
+      <div class="sub" id="act">Cargando…</div>
+    </div>
+    <div class="acciones">
+      <button type="button" class="btn prim" id="btnAct">Actualizar desde EPE</button>
+      <a class="btn" href="https://epe.santafe.gov.ar/oficina-virtual/" target="_blank" rel="noopener">Oficina Virtual ↗</a>
+    </div>
+  </header>
+  <nav class="pills" aria-label="Servicio"><button type="button" class="pill on" aria-current="page">Luz · EPE</button></nav>
+  <div id="err" class="aviso" hidden role="alert"></div>
+  <div id="app"><div class="cargando">Leyendo los datos de EPE…</div></div>
+</div>
+<script>
+const URL_API='https://n8n.mahra-ai.online/webhook/servicios-luz';
+const COLORES=['var(--s1)','var(--s2)','var(--s3)','var(--s4)'];
+const ETQ_PLAN=['','1.º','2.º','3.º','4.º','5.º','6.º'];
+let D=null,filtro='todos',verTodas=false,verPagos=false;
+const hoy=new Date().toLocaleDateString('en-CA',{timeZone:'America/Argentina/Buenos_Aires'});
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fm0=n=>'$'+Math.round(n||0).toLocaleString('es-AR');
+const fm2=n=>'$'+(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fd=s=>{if(!s)return '—';const p=s.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+const fdc=s=>{if(!s)return '—';const p=s.split('-');return p[2]+'/'+p[1];};
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fmy=s=>{const p=s.split('-');return MES[+p[1]-1]+' '+p[0];};
+const dias=s=>Math.round((Date.parse(s+'T00:00:00Z')-Date.parse(hoy+'T00:00:00Z'))/864e5);
+const bimTxt=(a,b)=>(ETQ_PLAN[b]||b)+' bim. '+a;
+
+function per(p){
+  const x=String(p||'').split('-');
+  const cuota=+x[x.length-1],bim=+x[x.length-2],anio=+x[x.length-3];
+  const tipo=x[0]==='FACTURA'?'factura':x[0]==='CONVENIO'?'convenio':x[0]==='AVISO'?'aviso':'otro';
+  return{tipo,anio,bim,cuota};
+}
+function concepto(d,totConv){
+  const q=per(d.periodo);
+  if(q.tipo==='factura')return 'Factura '+bimTxt(q.anio,q.bim)+' · cuota '+q.cuota;
+  if(q.tipo==='convenio')return 'Convenio · cuota '+q.cuota+(totConv?' de '+totConv:'');
+  if(q.tipo==='aviso')return 'Aviso de deuda · '+bimTxt(q.anio,q.bim);
+  return String(d.periodo||'');
+}
+const sel=()=>D.suministros.filter(s=>filtro==='todos'||String(s.cli)===filtro);
+const color=cli=>COLORES[D.suministros.findIndex(s=>s.cli===cli)%COLORES.length];
+const nombre=s=>s.alias||String(s.cli);
+const domicilio=s=>String(s.domicilio||'').split(' - ')[0].replace(/•/g,'Í').replace(' Piso LOCAL','');
+const totalConv=()=>{let m=0;D.suministros.forEach(s=>s.deudas.forEach(d=>{const q=per(d.periodo);if(q.tipo==='convenio'&&q.cuota>m)m=q.cuota;}));return m;};
+
+function deudasTodas(){
+  const out=[];
+  sel().forEach(s=>s.deudas.forEach(d=>out.push(Object.assign({},d,{s}))));
+  return out.sort((a,b)=>a.vto.localeCompare(b.vto));
+}
+function estadoDeuda(d){
+  const n=dias(d.vto);
+  if(n<0)return `<span class="est bad">▲ Vencida hace ${-n} d</span>`;
+  if(n===0)return '<span class="est warn">● Vence hoy</span>';
+  return `<span class="est ${n<=15?'warn':'neu'}">${n<=15?'● ':''}Vence en ${n} d</span>`;
+}
+
+// Pago de una cuota: primero en el mismo suministro; si no, en otro (las deudas convenidas quedaron en la cuenta del convenio)
+function pagoDe(cli,a,b,c,vto){
+  const clave='FACTURA-'+a+'-'+String(b).padStart(2,'0')+'-'+String(c).padStart(2,'0');
+  const propio=D.suministros.find(s=>s.cli===cli);
+  let p=propio.pagos.find(x=>x.periodo===clave&&x.vto===vto);
+  if(p)return p;
+  for(const s of D.suministros){p=s.pagos.find(x=>x.periodo===clave&&x.vto===vto);if(p)return p;}
+  return null;
+}
+function estadoCuota(s,f,c,vto){
+  const clave='FACTURA-'+f.anio+'-'+String(f.bim).padStart(2,'0')+'-'+String(c).padStart(2,'0');
+  const d=s.deudas.find(x=>x.periodo===clave);
+  if(d)return dias(d.vto)<0?'<span class="est bad">▲ Impaga</span>':'<span class="est warn">● A vencer</span>';
+  const p=pagoDe(s.cli,f.anio,f.bim,c,vto);
+  if(p&&p.desc==='CONVENIDO')return '<span class="est neu">Pasó a convenio</span>';
+  if(p)return `<span class="est good">✓ Pagada ${fdc(p.fecha)}</span>`;
+  return '<span class="est neu">Sin deuda</span>';
+}
+function kwhDe(s,a,b){const c=s.consumos.find(x=>x.anio===a&&x.bim===b);return c?c.kwh:null;}
+
+function htmlKpis(){
+  const ds=deudasTodas();
+  const venc=ds.filter(d=>d.vto<hoy);
+  const totV=venc.reduce((t,d)=>t+d.total,0);
+  const rec=venc.reduce((t,d)=>t+d.recargo+d.iva,0);
+  const prox=ds.find(d=>d.vto>=hoy);
+  const conv=ds.filter(d=>per(d.periodo).tipo==='convenio');
+  const totC=conv.reduce((t,d)=>t+d.total,0);
+  const nc=totalConv();
+  // consumo: el bimestre más reciente con dato en lo seleccionado
+  const cons={};
+  sel().forEach(s=>s.consumos.forEach(c=>{if(c.kwh>0){const k=c.anio*10+c.bim;cons[k]=(cons[k]||0)+c.kwh;}}));
+  const ks=Object.keys(cons).map(Number).sort((a,b)=>b-a);
+  let kw='<div class="v">—</div><div class="d">Sin consumos informados</div>';
+  if(ks.length){
+    const k=ks[0],a=Math.floor(k/10),b=k%10;
+    let cmp='';
+    if(ks[1]){const dif=Math.round((cons[k]/cons[ks[1]]-1)*100);cmp=' · '+Math.abs(dif)+' % '+(dif<0?'menos':'más')+' que el '+(ETQ_PLAN[ks[1]%10]||'')+' bim.';}
+    kw=`<div class="v">${cons[k].toLocaleString('es-AR')} kWh</div><div class="d">${bimTxt(a,b)}${cmp}</div>`;
+  }
+  return `<div class="kpis">
+    <div class="kpi"><div class="lb">Vencido al ${fdc(hoy)}</div><div class="v ${totV>0?'bad':''}">${fm0(totV)}</div><div class="d">${venc.length?venc.length+' conceptos · incluye '+fm0(rec)+' de recargos e IVA':'Nada vencido'}</div></div>
+    <div class="kpi"><div class="lb">Próximo vencimiento</div><div class="v">${prox?fm0(prox.total):'—'}</div><div class="d">${prox?fd(prox.vto)+' · '+esc(concepto(prox,nc)):'Sin vencimientos'}</div></div>
+    <div class="kpi"><div class="lb">Saldo del convenio</div><div class="v">${conv.length?fm0(totC):'—'}</div><div class="d">${conv.length?conv.length+' de '+nc+' cuotas sin pagar · última '+fmy(conv[conv.length-1].vto):'Sin convenio'}</div></div>
+    <div class="kpi"><div class="lb">Consumo del último bimestre</div>${kw}</div>
+  </div>`;
+}
+
+function htmlCards(){
+  const c=D.suministros.map(s=>{
+    const ven=s.deudas.filter(d=>d.vto<hoy).reduce((t,d)=>t+d.total,0);
+    const tot=s.deudas.reduce((t,d)=>t+d.total,0);
+    const f=s.facturas[0];
+    let est='<span class="est good">✓ Sin deuda</span>';
+    if(ven>0)est=`<span class="est bad">▲ ${fm0(ven)} vencidos</span>`;
+    else if(tot>0)est=`<span class="est warn">● ${fm0(tot)} a vencer</span>`;
+    const vieja=f&&f.vto2&&dias(f.vto2)<-180;
+    return `<button type="button" class="card ${String(s.cli)===filtro?'on':''}" data-f="${s.cli}" aria-pressed="${String(s.cli)===filtro}">
+      <span class="t"><span class="dot" style="background:${color(s.cli)}"></span>${esc(nombre(s))}</span>
+      <span class="dir">${esc(domicilio(s))} · Cliente ${s.cli}</span>
+      ${est}
+      <span class="m">${f?(vieja?'Sin facturas nuevas desde ':'Última factura: ')+bimTxt(f.anio,f.bim):'Sin facturas'}</span>
+    </button>`;
+  }).join('');
+  return `<section><div class="cab"><h2>Suministros</h2>${filtro!=='todos'?'<button type="button" class="link" data-f="todos">Ver todos</button>':''}</div><div class="cards">${c}</div></section>`;
+}
+
+function htmlDeuda(){
+  const ds=deudasTodas(),nc=totalConv();
+  if(!ds.length)return '<section><div class="cab"><h2>Qué hay que pagar</h2></div><div class="box"><p style="padding:16px 14px" class="nota">EPE no informa deuda para este suministro.</p></div></section>';
+  const lim=new Date(Date.parse(hoy+'T00:00:00Z')+60*864e5).toISOString().slice(0,10);
+  const ya=ds.filter(d=>d.vto<=lim),resto=ds.filter(d=>d.vto>lim);
+  const fila=d=>`<tr><td>${estadoDeuda(d)}</td><td><b>${esc(concepto(d,nc))}</b></td><td>${esc(nombre(d.s))}</td><td class="f">${fd(d.vto)}</td><td class="n">${fm2(d.importe)}</td><td class="n">${d.recargo+d.iva>0?fm2(d.recargo+d.iva):'—'}</td><td class="n"><b>${fm2(d.total)}</b></td></tr>`;
+  const cab='<thead><tr><th>Estado</th><th>Concepto</th><th>Suministro</th><th>Vence</th><th class="n">Importe</th><th class="n">Recargo + IVA</th><th class="n">A pagar hoy</th></tr></thead>';
+  const sum=a=>a.reduce((t,d)=>t+d.total,0);
+  return `<section><div class="cab"><h2>Qué hay que pagar</h2><span class="nota">Lo vencido y lo que vence en los próximos 60 días, con los recargos que calcula EPE a hoy</span></div>
+  <div class="box"><div class="tw"><table>${cab}<tbody>${ya.map(fila).join('')}</tbody><tfoot><tr><td colspan="6">Total</td><td class="n">${fm2(sum(ya))}</td></tr></tfoot></table></div>
+  ${resto.length?`<details><summary>Cuotas siguientes: ${resto.length} por ${fm0(sum(resto))}, hasta ${fmy(resto[resto.length-1].vto)}</summary><div class="tw"><table>${cab}<tbody>${resto.map(fila).join('')}</tbody></table></div></details>`:''}
+  </div></section>`;
+}
+
+// Columnas apiladas por suministro, últimos 12 bimestres
+function rango(){
+  let max=0;
+  D.suministros.forEach(s=>{s.facturas.forEach(f=>{max=Math.max(max,f.anio*6+f.bim-1);});s.consumos.forEach(c=>{max=Math.max(max,c.anio*6+c.bim-1);});});
+  const r=[];for(let i=max-11;i<=max;i++)r.push({anio:Math.floor(i/6),bim:i%6+1});
+  return r;
+}
+function escala(m){if(m<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(m)));const q=m/p;return (q<=1?1:q<=2?2:q<=5?5:10)*p;}
+function grafico(id,titulo,valor,fmt,corto){
+  const r=rango(),ss=sel();
+  const cols=r.map(x=>ss.map(s=>({s,v:valor(s,x.anio,x.bim)||0})));
+  const tot=cols.map(c=>c.reduce((t,o)=>t+o.v,0));
+  const techo=escala(Math.max.apply(null,tot));
+  const W=560,H=240,L=52,Rr=6,T=8,B=26,alto=H-T-B,banda=(W-L-Rr)/r.length,ancho=Math.min(26,banda*.62);
+  let g='';
+  [0,.5,1].forEach(q=>{const y=T+alto-alto*q;g+=`<line x1="${L}" x2="${W-Rr}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,.08)"/><text x="${L-8}" y="${y+4}" text-anchor="end">${corto(techo*q)}</text>`;});
+  cols.forEach((c,i)=>{
+    const x=L+banda*i+(banda-ancho)/2;let y=T+alto;
+    const vis=c.filter(o=>o.v>0);
+    vis.forEach((o,j)=>{
+      const h=Math.max(2,o.v/techo*alto);const y0=y-h;
+      const sup=j===vis.length-1,gap=sup?0:2,hh=Math.max(1,h-gap);
+      const rr=sup?Math.min(4,hh):0;
+      const yy=y0+gap;
+      g+=`<path fill="${color(o.s.cli)}" d="M${x} ${yy+hh}V${yy+rr}${rr?`Q${x} ${yy} ${x+rr} ${yy}`:''}H${x+ancho-rr}${rr?`Q${x+ancho} ${yy} ${x+ancho} ${yy+rr}`:''}V${yy+hh}Z"/>`;
+      y=y0;
+    });
+    if(i%2===(r.length-1)%2||r.length<=8)g+=`<text x="${L+banda*i+banda/2}" y="${H-8}" text-anchor="middle">${r[i].bim}/${String(r[i].anio).slice(2)}</text>`;
+    g+=`<rect x="${L+banda*i}" y="${T}" width="${banda}" height="${alto+B}" fill="transparent" data-g="${id}" data-i="${i}"/>`;
+  });
+  GR[id]={r,cols,tot,fmt};
+  const leg=ss.length>1?`<div class="leg">${ss.map(s=>`<span><i class="dot" style="background:${color(s.cli)}"></i>${esc(nombre(s))}</span>`).join('')}</div>`:'';
+  return `<div class="gbox"><h3>${titulo}</h3>${leg}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(titulo)} por bimestre. El detalle está en la tabla de facturas.">${g}</svg><div class="tip" id="tip-${id}"></div></div>`;
+}
+const GR={};
+function htmlGraficos(){
+  const importe=(s,a,b)=>{const f=s.facturas.find(x=>x.anio===a&&x.bim===b);return f?f.imp1+f.imp2:0;};
+  const cortoP=n=>n>=1e6?'$'+(n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1})+' M':n>=1e3?'$'+Math.round(n/1e3)+' mil':'$'+Math.round(n);
+  const cortoK=n=>Math.round(n).toLocaleString('es-AR');
+  return `<section><div class="cab"><h2>Por bimestre</h2><span class="nota">Últimos 12 bimestres. EPE factura cada bimestre en 2 cuotas.</span></div><div class="graf">
+    ${grafico('kwh','Consumo (kWh)',kwhDe,n=>Math.round(n).toLocaleString('es-AR')+' kWh',cortoK)}
+    ${grafico('imp','Facturado ($, sin ajustar por inflación)',importe,fm0,cortoP)}
+  </div></section>`;
+}
+
+function htmlFacturas(){
+  const filas=[];
+  sel().forEach(s=>s.facturas.forEach(f=>filas.push({s,f})));
+  filas.sort((a,b)=>(b.f.anio*10+b.f.bim)-(a.f.anio*10+a.f.bim)||b.f.vto2.localeCompare(a.f.vto2));
+  const vis=verTodas?filas:filas.slice(0,12);
+  const tr=({s,f})=>{
+    const t=f.imp1+f.imp2,k=kwhDe(s,f.anio,f.bim);
+    return `<tr><td><b>${bimTxt(f.anio,f.bim)}</b></td><td>${esc(nombre(s))}</td><td class="n">${k?k.toLocaleString('es-AR'):'—'}</td><td class="n">${fm0(t)}</td><td class="n">${k?fm0(t/k):'—'}</td><td class="f">${fdc(f.vto1)} ${estadoCuota(s,f,1,f.vto1)}</td><td class="f">${fdc(f.vto2)} ${estadoCuota(s,f,2,f.vto2)}</td><td><button type="button" class="link" data-pdf="${s.cli}|${f.anio}|${f.bim}|${f.plan}|${f.nrofac}">PDF</button></td></tr>`;
+  };
+  return `<section><div class="cab"><h2>Facturas</h2><span class="nota">$/kWh = total de la factura, con impuestos, sobre el consumo</span></div>
+  <div class="box"><div class="tw"><table><thead><tr><th>Período</th><th>Suministro</th><th class="n">kWh</th><th class="n">Total</th><th class="n">$/kWh</th><th>Cuota 1</th><th>Cuota 2</th><th>Factura</th></tr></thead><tbody>${vis.map(tr).join('')}</tbody></table></div>
+  ${filas.length>12?`<div class="mas"><button type="button" class="link" data-mas="f">${verTodas?'Ver menos':'Ver las '+filas.length+' facturas'}</button></div>`:''}</div></section>`;
+}
+
+function htmlPagos(){
+  const filas=[],vistos={};
+  D.suministros.forEach(s=>s.pagos.forEach(p=>{
+    const q=per(p.periodo);let duenio=s;
+    if(q.tipo==='factura'&&!s.facturas.some(f=>f.anio===q.anio&&f.bim===q.bim&&(q.cuota===1?f.vto1:f.vto2)===p.vto)){
+      const o=D.suministros.find(x=>x.facturas.some(f=>f.anio===q.anio&&f.bim===q.bim&&(q.cuota===1?f.vto1:f.vto2)===p.vto));
+      if(o)duenio=o;
+    }
+    filas.push({p,s:duenio});
+  }));
+  const f2=filas.filter(x=>filtro==='todos'||String(x.s.cli)===filtro).sort((a,b)=>b.p.fecha.localeCompare(a.p.fecha)||b.p.vto.localeCompare(a.p.vto));
+  const vis=verPagos?f2:f2.slice(0,10);
+  const tr=({p,s})=>{
+    const conv=p.desc==='CONVENIDO';
+    return `<tr><td class="f">${fd(p.fecha)}</td><td><b>${esc(concepto(p,0))}</b></td><td>${esc(nombre(s))}</td><td class="f">${fd(p.vto)}</td><td>${esc(p.boca)}</td><td>${conv?'<span class="est neu">Pasó a convenio</span>':'<span class="est good">✓ Pagado</span>'}</td><td class="n">${fm2(p.importe)}</td></tr>`;
+  };
+  return `<section><div class="cab"><h2>Últimos pagos</h2><span class="nota">EPE informa solo los últimos 12 pagos de cada suministro</span></div>
+  <div class="box"><div class="tw"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Suministro</th><th>Vencía</th><th>Dónde</th><th>Estado</th><th class="n">Importe</th></tr></thead><tbody>${vis.map(tr).join('')||'<tr><td colspan="7">Sin pagos informados</td></tr>'}</tbody></table></div>
+  ${f2.length>10?`<div class="mas"><button type="button" class="link" data-mas="p">${verPagos?'Ver menos':'Ver los '+f2.length+' pagos'}</button></div>`:''}</div></section>`;
+}
+
+function render(){
+  document.getElementById('act').textContent='EPE · datos del '+D.actualizado.split(' ').map((x,i)=>i?x:fd(x)).join(' ');
+  const av=(D.avisos||[]).length?`<div class="aviso">${D.avisos.map(esc).join(' · ')}</div>`:'';
+  document.getElementById('app').innerHTML=`<div style="display:flex;flex-direction:column;gap:28px">${av}${htmlKpis()}${htmlDeuda()}${htmlCards()}${htmlGraficos()}${htmlFacturas()}${htmlPagos()}</div>`;
+}
+function error(m){const e=document.getElementById('err');e.textContent=m;e.hidden=!m;}
+async function api(body){
+  const tk=window.MahraAuth?MahraAuth.token():'';
+  const r=await fetch(URL_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(Object.assign({token:tk},body)),cache:'no-store'});
+  if(!r.ok)throw new Error('EPE o el servidor no respondieron (error '+r.status+')');
+  const d=await r.json();
+  if(d&&d.error==='sin_sesion'){if(window.MahraAuth)MahraAuth.salir();throw new Error('La sesión venció: volvé a entrar.');}
+  return d;
+}
+async function actualizar(){
+  const b=document.getElementById('btnAct');b.disabled=true;b.textContent='Consultando EPE…';error('');
+  try{const r=await api({accion:'actualizar'});if(r&&r.data){D=r.data;render();}else throw new Error('EPE no devolvió datos');}
+  catch(e){error('No se pudo actualizar: '+e.message+(D?'. Se siguen mostrando los datos anteriores.':''));}
+  b.disabled=false;b.textContent='Actualizar desde EPE';
+}
+async function bajarPdf(btn){
+  const [cli,anio,mes,plan,nrofac]=btn.dataset.pdf.split('|');
+  btn.disabled=true;const t=btn.textContent;btn.textContent='Bajando…';error('');
+  try{
+    const r=await api({accion:'pdf',cli,anio,mes,plan,nrofac});
+    if(!r||!r.ok)throw new Error((r&&r.error)||'sin respuesta');
+    const bin=atob(r.base64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([u],{type:'application/pdf'}));
+    const a=document.createElement('a');a.href=url;a.download=r.nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+  }catch(e){error('No se pudo bajar la factura: '+e.message);}
+  btn.disabled=false;btn.textContent=t;
+}
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-f]');if(f){const v=f.dataset.f;filtro=(filtro===v?'todos':v);render();return;}
+  const m=e.target.closest('[data-mas]');if(m){if(m.dataset.mas==='f')verTodas=!verTodas;else verPagos=!verPagos;render();return;}
+  const p=e.target.closest('[data-pdf]');if(p){bajarPdf(p);}
+});
+document.getElementById('btnAct').addEventListener('click',actualizar);
+document.addEventListener('mousemove',e=>{
+  const t=e.target.closest&&e.target.closest('[data-g]');
+  document.querySelectorAll('.tip').forEach(x=>{if(!t||x.id!=='tip-'+t.dataset.g)x.style.display='none';});
+  if(!t)return;
+  const G=GR[t.dataset.g],i=+t.dataset.i,tip=document.getElementById('tip-'+t.dataset.g),box=tip.parentElement.getBoundingClientRect();
+  const filas=G.cols[i].filter(o=>o.v>0);
+  tip.innerHTML=`<b>${bimTxt(G.r[i].anio,G.r[i].bim)}</b>`+(filas.length?filas.map(o=>`<div><span>${esc(nombre(o.s))}</span><span>${G.fmt(o.v)}</span></div>`).join('')+(filas.length>1?`<div><span>Total</span><span>${G.fmt(G.tot[i])}</span></div>`:''):'<div><span>Sin datos</span></div>');
+  tip.style.display='block';
+  const x=Math.min(e.clientX-box.left+12,box.width-tip.offsetWidth-6);
+  tip.style.left=Math.max(6,x)+'px';tip.style.top=Math.max(6,e.clientY-box.top-tip.offsetHeight-10)+'px';
+});
+(async function(){
+  if(window.MahraAuth&&!MahraAuth.token())return;
+  try{
+    const r=await api({accion:'leer'});
+    if(r&&r.data){D=r.data;render();}else{document.getElementById('app').innerHTML='<div class="cargando">Consultando EPE por primera vez…</div>';await actualizar();}
+  }catch(e){error('No se pudieron leer los datos: '+e.message);document.getElementById('app').innerHTML='';}
+})();
+</script>
+</body>
+</html>

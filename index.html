@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0f0f0d;--surface:#171714;--surface2:#1e1e1a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0ede8;--muted:#9a9690;--muted2:#8a867f;--ventas:#d4a853;--compras:#7ba8cc;--gastos:#e07060;--stock:#8fbe9e;--font-display:'Fraunces',Georgia,serif;--font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace}
+:root{--bg:#0f0f0d;--surface:#171714;--surface2:#1e1e1a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0ede8;--muted:#9a9690;--muted2:#8a867f;--ventas:#d4a853;--compras:#7ba8cc;--gastos:#e07060;--stock:#8fbe9e;--servicios:#c9a0dc;--font-display:'Fraunces',Georgia,serif;--font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace}
 html,body{height:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);display:flex;flex-direction:column;min-height:100vh}
 a{color:var(--ventas)}a:hover{color:#f0d79a}
@@ -80,7 +80,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
 <header>
   <div>
     <div class="logo">MAHRA <em>Panel General</em></div>
-    <div class="logo-sub">VENTAS · COMPRAS · GASTOS · STOCK</div>
+    <div class="logo-sub">VENTAS · COMPRAS · GASTOS · STOCK · SERVICIOS</div>
   </div>
   <div class="hdr-right"><span id="hdrInfo">Inicio</span></div>
 </header>
@@ -91,6 +91,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
   <button type="button" class="tab" data-tab="compras"><span class="dot" style="background:var(--compras)"></span>Compras</button>
   <button type="button" class="tab" data-tab="gastos"><span class="dot" style="background:var(--gastos)"></span>Gastos</button>
   <button type="button" class="tab" data-tab="stock"><span class="dot" style="background:var(--stock)"></span>Stock</button>
+  <button type="button" class="tab" data-tab="servicios"><span class="dot" style="background:var(--servicios)"></span>Servicios</button>
 </nav>
 
 <main>
@@ -123,6 +124,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
           <tr><td>Gastos</td><td>Flujo Financiero</td><td>Hoja MOVIMIENTOS</td><td>Bancos día 5 · tarjetas día 11 · compras diario</td><td class="ok">En vivo</td></tr>
           <tr><td>Gastos</td><td>Control de Cheques</td><td>Hoja CONTROL CHEQUES AGRUPADO</td><td>Al abrir</td><td class="ok">En vivo</td></tr>
           <tr><td>Stock</td><td>Stock Intelligence</td><td>Stock de EcommApp (Metabase)</td><td>Diario 07:15</td><td class="ok">En vivo</td></tr>
+          <tr><td>Servicios</td><td>Luz</td><td>Oficina Virtual de EPE</td><td>Diario 08:15 · botón Actualizar</td><td class="ok">En vivo</td></tr>
         </tbody>
       </table></div>
     </div>
@@ -132,6 +134,7 @@ footer{padding:12px 40px;border-top:1px solid var(--border);display:flex;justify
   <section class="view" id="v-gastos" style="--c:var(--gastos)" aria-label="Gastos"></section>
   <section class="view" id="v-stock" style="--c:var(--stock)" aria-label="Stock"></section>
   <section class="view" id="v-compras" style="--c:var(--compras)" aria-label="Compras"></section>
+  <section class="view" id="v-servicios" style="--c:var(--servicios)" aria-label="Servicios"></section>
 </main>
 
 <footer><span>MAHRA · Panel General</span><span>Cada módulo muestra adentro el panel que ya existe</span></footer>
@@ -149,9 +152,11 @@ const MODS={
     secs:['Gastos mensuales','Flujo financiero','Cheques']},
   stock:{name:'Stock',color:'var(--stock)',live:true,desc:'Stock por artículo, temporada y color, alertas, pedidos a proveedores e insumos.',
     panels:[{name:'Stock Intelligence',url:'https://pablogiacomelli.github.io/stock-dashboard/'}],
-    secs:['Panel','Resumen por temporada','Análisis de artículos','Pedidos','Insumos']}
+    secs:['Panel','Resumen por temporada','Análisis de artículos','Pedidos','Insumos']},
+  servicios:{name:'Servicios',color:'var(--servicios)',live:true,desc:'Luz de los 4 suministros de EPE: deuda con recargos, vencimientos, convenio, consumos, facturas y pagos.',
+    panels:[{name:'Servicios',url:'https://pablogiacomelli.github.io/panel-general/servicios.html'}],secs:['Luz']}
 };
-const ORDER=['ventas','compras','gastos','stock'];
+const ORDER=['ventas','compras','gastos','stock','servicios'];
 const subSel={};
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
