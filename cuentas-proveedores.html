@@ -166,7 +166,13 @@ footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color
 
   <div class="charts-grid">
     <div class="card chart-full">
-      <div class="card-header"><div><div class="card-title">Deuda y stock valorizado por proveedor</div><div class="card-sub" id="subProv"></div></div></div>
+      <div class="card-header"><div><div class="card-title">Saldo y stock valorizado por proveedor</div><div class="card-sub" id="subProv"></div></div>
+        <div class="ctl"><span class="range-label">Cheques sin debitar</span>
+          <div class="preset-btns" id="chqBtns2">
+            <button class="preset-btn" data-c="pagados" onclick="setCheq('pagados')" title="Los cheques entregados y todavía no debitados se suman a la deuda: cómo está realmente la cuenta">Sumados a la deuda</button>
+            <button class="preset-btn" data-c="todos" onclick="setCheq('todos')" title="Como está en EcommApp: el cheque entregado ya cuenta como pago">Sin sumar</button>
+          </div>
+        </div></div>
       <div class="chart-wrap tall"><canvas id="chProv"></canvas></div>
     </div>
     <div class="card">
@@ -464,7 +470,7 @@ function mkChart(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Ch
 function render(){
   if(!D||!S) return;
   calcular();
-  document.querySelectorAll('#chqBtns .preset-btn').forEach(b=>b.classList.toggle('active',b.dataset.c===UI.cheq));
+  document.querySelectorAll('#chqBtns .preset-btn, #chqBtns2 .preset-btn').forEach(b=>b.classList.toggle('active',b.dataset.c===UI.cheq));
   document.querySelectorAll('#ctaBtns .preset-btn').forEach(b=>b.classList.toggle('active',b.dataset.t===UI.cta));
   const valTemp={}; for(const s of STK){ valTemp[s.temp]=(valTemp[s.temp]||0)+s.valor; }
   document.getElementById('tempBtns').innerHTML='<button class="preset-btn'+(UI.temps.length?'':' active')+'" onclick="toggleTemp(\'*\')">Todas</button>'+
@@ -502,14 +508,22 @@ function render(){
   Chart.defaults.color='#9a9690'; Chart.defaults.font.family="'DM Mono',monospace"; Chart.defaults.font.size=10.5; Chart.defaults.borderColor='rgba(255,255,255,0.06)';
   const TT={backgroundColor:'#1e1e1a',borderColor:'rgba(255,255,255,.14)',borderWidth:1,titleColor:'#f0ede8',bodyColor:'#f0ede8',padding:10};
 
-  // deuda y stock por proveedor
-  const top=V.filter(x=>x.saldo>0.5||x.stock>0.5).sort((a,b)=>Math.max(b.saldo,b.stock)-Math.max(a.saldo,a.stock)).slice(0,12);
-  document.getElementById('subProv').textContent='Los '+top.length+' más grandes · '+grp+' · stock de '+lblTemps();
+  // saldo (deuda o a favor) y stock por proveedor
+  const top=V.filter(x=>Math.abs(x.saldo)>0.5||x.stock>0.5).sort((a,b)=>Math.max(Math.abs(b.saldo),b.stock)-Math.max(Math.abs(a.saldo),a.stock)).slice(0,14);
+  const nFavor=top.filter(x=>x.saldo<-0.5).length;
+  document.getElementById('subProv').textContent=top.length+' proveedores · '+(UI.cheq==='pagados'?'con los cheques sin debitar sumados a la deuda':'sin sumar los cheques sin debitar (como EcommApp)')+' · stock de '+lblTemps()+(nFavor?' · '+nFavor+' a favor nuestro':'');
   mkChart('chProv',{type:'bar',data:{labels:top.map(x=>nom(x.p)),datasets:[
-      {label:'Deuda',data:top.map(x=>Math.max(x.saldo,0)),backgroundColor:C.deuda,borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72},
+      {label:'Saldo',data:top.map(x=>Math.abs(x.saldo)>0.5?Math.abs(x.saldo):0),backgroundColor:top.map(x=>x.saldo<0?C.favor:C.deuda),borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72},
       {label:'Stock valorizado',data:top.map(x=>x.stock),backgroundColor:C.stock,borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72}]},
     options:{indexAxis:'y',maintainAspectRatio:false,interaction:{mode:'index',axis:'y',intersect:false},onClick:(e,els)=>{ if(els.length) abrirProveedor(top[els[0].index].p); },onHover:(e,els)=>{ e.native.target.style.cursor=els.length?'pointer':'default'; },
-      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{mode:'index',axis:'y',intersect:false,callbacks:{title:i=>{ const p=top[i[0].dataIndex].p; return nom(p)===p?p:nom(p)+' · '+p; },label:c=>' '+c.dataset.label+': '+$m(c.parsed.x)}})},
+      plugins:{legend:{position:'bottom',onClick:()=>{},labels:{boxWidth:9,boxHeight:9,generateLabels:()=>[
+            {text:'Deuda',fillStyle:C.deuda,strokeStyle:C.deuda,fontColor:'#9a9690',lineWidth:0},
+            {text:'A favor',fillStyle:C.favor,strokeStyle:C.favor,fontColor:'#9a9690',lineWidth:0},
+            {text:'Stock valorizado',fillStyle:C.stock,strokeStyle:C.stock,fontColor:'#9a9690',lineWidth:0}]}},
+        tooltip:Object.assign({},TT,{mode:'index',axis:'y',intersect:false,callbacks:{title:i=>{ const p=top[i[0].dataIndex].p; return nom(p)===p?p:nom(p)+' · '+p; },
+          labelColor:c=>{ const x=top[c.dataIndex]; const col=c.datasetIndex===0?(x.saldo<0?C.favor:C.deuda):C.stock; return {borderColor:col,backgroundColor:col}; },
+          label:c=>{ const x=top[c.dataIndex]; if(c.datasetIndex===0) return ' '+(x.saldo<-0.5?'A FAVOR: ':(x.saldo>0.5?'Deuda: ':'Saldo: '))+$m(Math.abs(x.saldo)); return ' Stock valorizado: '+$m(c.parsed.x); },
+          afterBody:i=>{ const x=top[i[0].dataIndex]; return x.chqSin>0.5?['',' Cheques sin debitar: '+$m(x.chqSin)+(UI.cheq==='pagados'?' (sumados)':' (sin sumar)')]:[]; }}})},
       scales:{x:{ticks:{callback:v=>$k(v)}},y:{grid:{display:false},ticks:{color:'#f0ede8'}}}}});
 
   // vencimientos por mes
@@ -543,12 +557,12 @@ function renderTabla(V){
   filas.sort((a,b)=>{ const va=k==='p'?nom(a.p):a[k], vb=k==='p'?nom(b.p):b[k]; return (typeof va==='string'?va.localeCompare(vb):(va-vb))*d; });
   const mx=Math.max(1,...filas.map(x=>Math.max(x.saldo,x.stock)));
   const TG={merc:'<span class="tag art">mercadería</span>',ins:'<span class="tag ins">insumos</span>',otro:'<span class="tag otro">otros</span>'};
-  const cols=[['p','Proveedor',0],['saldo','Saldo hoy',1],['venc','Vencido',1],['prox','Vence 30 días',1],['chqSin','Cheques sin debitar',1],['stock','Stock valorizado',1],['_bar','Deuda vs stock',0],['pv','Próximo venc.',1],['up','Último pago',1]];
+  const cols=[['p','Proveedor',0],['saldo','Deuda / a favor',1],['venc','Vencido',1],['prox','Vence 30 días',1],['chqSin','Cheques sin debitar',1],['stock','Stock valorizado',1],['_bar','Deuda vs stock',0],['pv','Próximo venc.',1],['up','Último pago',1]];
   document.getElementById('cntProv').textContent=filas.length+' proveedores';
   document.getElementById('tProv').innerHTML='<thead><tr>'+cols.map(c=>'<th class="'+(c[2]?'td-num':'')+(orden.k===c[0]?' sorted':'')+'" '+(c[0]==='_bar'?'':'onclick="ordenar(\''+c[0]+'\')"')+'>'+c[1]+(orden.k===c[0]?(orden.d<0?' ↓':' ↑'):'')+'</th>').join('')+'</tr></thead><tbody>'+
     (filas.length?filas.map(x=>'<tr onclick="abrirProveedor(\''+esc(x.p).replace(/'/g,"\\'")+'\')">'+
       '<td><b>'+esc(nom(x.p))+'</b> '+(nom(x.p)!==x.p?'<span class="muted" style="font-size:10.5px;margin-right:6px">'+esc(x.p)+'</span>':'')+(x.ctas?'<span class="tag '+(x.ctas==='12'?'warn2':'otro')+'">'+(x.ctas==='12'?'cta 1 y 2':'solo cta '+x.ctas)+'</span>':'<span class="tag otro" title="Todavía no está definido qué cuentas lleva este proveedor">cuentas sin definir</span>')+'</td>'+
-      '<td class="td-num '+(x.saldo>0.5?'pos':(x.saldo<-0.5?'neg':'muted'))+'">'+$m(x.saldo)+'</td>'+
+      '<td class="td-num '+(x.saldo>0.5?'pos':(x.saldo<-0.5?'neg':'muted'))+'">'+(x.saldo<-0.5?'<span class="tag ok" style="margin-right:6px">A FAVOR</span>'+$m(-x.saldo):$m(x.saldo))+'</td>'+
       '<td class="td-num">'+(x.venc>0.5?'<span class="pos">'+$m(x.venc)+'</span>':'<span class="muted">—</span>')+'</td>'+
       '<td class="td-num">'+(x.prox>0.5?'<span class="warn">'+$m(x.prox)+'</span>':'<span class="muted">—</span>')+'</td>'+
       '<td class="td-num">'+(x.chqSin>0.5?'<span style="color:var(--purple)">'+$m(x.chqSin)+'</span><div class="muted" style="font-size:9.5px">'+x.nChq+' cheques</div>':'<span class="muted">—</span>')+'</td>'+
@@ -591,7 +605,7 @@ function abrirProveedor(p){
   const cls=v=>v>0.5?'pos':(v<-0.5?'neg':'');
 
   abrirModal('Proveedor de mercadería · '+lblVista(), nom(p)===p?p:nom(p)+' · '+p,
-    '<div class="sm-kpis">'+kpi(soloPag?'Deuda real hoy':'Saldo hoy (EcommApp)','<span class="'+cls(x.saldo)+'">'+$m(x.saldo)+'</span>')+kpi('Cheques sin debitar',x.chqSin>0.5?'<span style="color:var(--purple)">'+$m(x.chqSin)+'</span>':'—')+kpi('Vencido',x.venc>0.5?'<span class="pos">'+$m(x.venc)+'</span>':'—')+kpi('Stock valorizado',x.stock>0.5?$m(x.stock):'—')+'</div>'+
+    '<div class="sm-kpis">'+kpi(x.saldo<-0.5?'A FAVOR nuestro':(soloPag?'Deuda real hoy':'Deuda hoy (EcommApp)'),'<span class="'+cls(x.saldo)+'">'+$m(Math.abs(x.saldo))+'</span>')+kpi('Cheques sin debitar',x.chqSin>0.5?'<span style="color:var(--purple)">'+$m(x.chqSin)+'</span>':'—')+kpi('Vencido',x.venc>0.5?'<span class="pos">'+$m(x.venc)+'</span>':'—')+kpi('Stock valorizado',x.stock>0.5?$m(x.stock):'—')+'</div>'+
     '<div class="sm-section" style="padding-top:12px;padding-bottom:12px"><div class="note" style="margin:0">'+(soloPag
       ?'Saldo de EcommApp '+$m(x.saldoEco)+' + cheques entregados sin debitar '+$m(x.chqSin)+' = <b style="color:var(--text)">'+$m(x.saldo)+'</b>.'
       :'Saldo de EcommApp, donde todo cheque entregado ya cuenta como pago. Contando solo los cheques pagados, la deuda sería <b style="color:var(--text)">'+$m(x.saldoEco+x.chqSin)+'</b>.')+'</div></div>'+
