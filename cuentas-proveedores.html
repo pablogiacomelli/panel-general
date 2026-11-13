@@ -88,6 +88,7 @@ main{padding:28px 40px;max-width:1600px}
 .tag.prox{background:#d4a85322;color:var(--gold)}
 .tag.ok{background:#8fbe9e22;color:var(--green)}
 .tag.chq{background:#a78bfa22;color:var(--purple)}
+.tag.warn2{background:#d4a85322;color:var(--gold)}
 tr.sint td{background:#a78bfa0d}
 .mini{display:flex;flex-direction:column;gap:3px;min-width:150px}
 .mini div{height:6px;border-radius:0 3px 3px 0;min-width:1px}
@@ -350,6 +351,19 @@ function chqAbierto(c){ return c.est!=='pagado' && c.est!=='vencido'; }
 function chqPendiente(c){ return chqAbierto(c) && !!(c.mov||c.grupo); }
 // cheque sin debitar que la planilla da como entregado pero que NO aparece como pago en EcommApp: no se suma, se avisa
 function chqSinPago(c){ return chqAbierto(c) && !c.mov && !c.grupo; }
+// Qué cuentas lleva cada proveedor (definido por Pablo el 13/11/2026).
+// '1' o '2' = lleva una sola cuenta: todos sus movimientos y cheques van ahí.
+// '12' = lleva las dos: cada movimiento se reparte con la regla de cuentaDe().
+const CTAS_PROV = [
+  [/VAMELI/i, '12'],
+  [/UHART/i, '2'],              // SARA
+  [/JUANILLA/i, '12'],          // JS
+  [/TOFIARO/i, '12'],           // NF
+  [/RIOS FORNASARI/i, '1'],     // PREGO
+  [/SE VE/i, '1'],              // CB
+  [/MARIA DEL VALLE/i, '2']
+];
+function ctasDe(p){ const n=String(p||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); for(const [rx,v] of CTAS_PROV){ if(rx.test(n)) return v; } return ''; }
 // cuenta 1 / cuenta 2 de cada movimiento
 function cuentaDe(m, porId){
   if(/CTA\.?\s*2/i.test(m.ob||'')) return '2';
@@ -389,10 +403,11 @@ function calcular(){
   for(const p of nombres){
     const todos=porProv.get(p)||[];
     const porId={}; todos.forEach(m=>porId[m.id]=m);
-    todos.forEach(m=>{ m.cta=cuentaDe(m,porId); });
+    const ctas=ctasDe(p), fija=(ctas==='1'||ctas==='2')?ctas:'';
+    todos.forEach(m=>{ m.cta=fija||cuentaDe(m,porId); });
     const ms=UI.cta==='uni'?todos:todos.filter(m=>m.cta===UI.cta);
     const g=GRUPO[p]||(stockProv[p]?'merc':'otro');
-    const cheques=(chqProv[p]||[]).filter(c=>UI.cta==='uni'||(c.mov?c.mov.cta:'1')===UI.cta);
+    const cheques=(chqProv[p]||[]).filter(c=>UI.cta==='uni'||(fija||(c.mov?c.mov.cta:(c.grupo&&c.grupo.cta)||'1'))===UI.cta);
     const chPend=cheques.filter(chqPendiente);
     const chqSin=sum(chPend,c=>c.monto);
     const chFuera=cheques.filter(chqSinPago);
@@ -405,7 +420,7 @@ function calcular(){
     const pagos=ms.filter(m=>m.ty===2&&m.a<0&&!/cr[eé]dito/i.test(m.tco||'')).sort((a,b)=>b.f.localeCompare(a.f));
     const futuros=pen.filter(d=>(d.m.v||d.m.f)>=H);
     const st=stockProv[p]||{valor:0,q:0,sinCosto:0};
-    P.push({ p, g, saldo, saldoEco, chqSin, nChq:chPend.length, chqFuera:sum(chFuera,c=>c.monto), nFuera:chFuera.length, cheques, venc, prox, pen, ms, up:pagos[0]?pagos[0].f:'', pv:futuros[0]?(futuros[0].m.v||futuros[0].m.f):'', stock:st.valor, pares:st.q, sinCosto:st.sinCosto });
+    P.push({ p, g, ctas, saldo, saldoEco, chqSin, nChq:chPend.length, chqFuera:sum(chFuera,c=>c.monto), nFuera:chFuera.length, cheques, venc, prox, pen, ms, up:pagos[0]?pagos[0].f:'', pv:futuros[0]?(futuros[0].m.v||futuros[0].m.f):'', stock:st.valor, pares:st.q, sinCosto:st.sinCosto });
   }
 }
 function visibles(){ return P.filter(x=> x.g==='merc'); }
@@ -490,7 +505,7 @@ function render(){
   renderTabla(V);
   const sinProv=P.find(x=>x.p==='(sin proveedor)');
   document.getElementById('nota').innerHTML='La deuda es el saldo de cuenta corriente de EcommApp (con IVA). El vencido y el por vencer salen del saldo pendiente de cada comprobante: se descuentan los pagos imputados a su cuota y los pagos a cuenta y notas de crédito, del comprobante más viejo al más nuevo. '+
-    'El stock se valoriza al costo de la última compra, sin IVA, y se asigna al proveedor de esa compra.'+(sinProv&&sinProv.stock>0?' Hay '+$m(sinProv.stock)+' de stock sin proveedor identificado.':'')+(UI.cheq==='pagados'?' En esta vista cada cheque entregado y todavía no debitado sigue contando como deuda, con vencimiento en su fecha de pago.':' En esta vista todo cheque entregado cuenta como pago, igual que en EcommApp, aunque todavía no se haya debitado.')+(sum(V,x=>x.nFuera)?' <span style="color:var(--gold)">Para revisar: '+sum(V,x=>x.nFuera)+' cheques sin debitar por '+$m(sum(V,x=>x.chqFuera))+' están en la planilla de cheques pero no figuran como pago en EcommApp; no se suman a la deuda.</span>':'')+' Cuenta 1: facturas A, notas de crédito A y cheques. Cuenta 2: recibos, notas de crédito B y pagos con "CTA 2".';
+    'El stock se valoriza al costo de la última compra, sin IVA, y se asigna al proveedor de esa compra.'+(sinProv&&sinProv.stock>0?' Hay '+$m(sinProv.stock)+' de stock sin proveedor identificado.':'')+(UI.cheq==='pagados'?' En esta vista cada cheque entregado y todavía no debitado sigue contando como deuda, con vencimiento en su fecha de pago.':' En esta vista todo cheque entregado cuenta como pago, igual que en EcommApp, aunque todavía no se haya debitado.')+(sum(V,x=>x.nFuera)?' <span style="color:var(--gold)">Para revisar: '+sum(V,x=>x.nFuera)+' cheques sin debitar por '+$m(sum(V,x=>x.chqFuera))+' están en la planilla de cheques pero no figuran como pago en EcommApp; no se suman a la deuda.</span>':'')+' Los proveedores con una sola cuenta tienen todo en esa cuenta. En los que llevan las dos: Cuenta 1 son facturas A, notas de crédito A y cheques; Cuenta 2 son recibos, notas de crédito B y pagos con "CTA 2" en la observación.';
 }
 
 function renderTabla(V){
@@ -504,7 +519,7 @@ function renderTabla(V){
   document.getElementById('cntProv').textContent=filas.length+' proveedores';
   document.getElementById('tProv').innerHTML='<thead><tr>'+cols.map(c=>'<th class="'+(c[2]?'td-num':'')+(orden.k===c[0]?' sorted':'')+'" '+(c[0]==='_bar'?'':'onclick="ordenar(\''+c[0]+'\')"')+'>'+c[1]+(orden.k===c[0]?(orden.d<0?' ↓':' ↑'):'')+'</th>').join('')+'</tr></thead><tbody>'+
     (filas.length?filas.map(x=>'<tr onclick="abrirProveedor(\''+esc(x.p).replace(/'/g,"\\'")+'\')">'+
-      '<td><b>'+esc(x.p)+'</b> '+TG[x.g]+'</td>'+
+      '<td><b>'+esc(x.p)+'</b> '+(x.ctas?'<span class="tag '+(x.ctas==='12'?'warn2':'otro')+'">'+(x.ctas==='12'?'cta 1 y 2':'solo cta '+x.ctas)+'</span>':'<span class="tag otro" title="Todavía no está definido qué cuentas lleva este proveedor">cuentas sin definir</span>')+'</td>'+
       '<td class="td-num '+(x.saldo>0.5?'pos':(x.saldo<-0.5?'neg':'muted'))+'">'+$m(x.saldo)+'</td>'+
       '<td class="td-num">'+(x.venc>0.5?'<span class="pos">'+$m(x.venc)+'</span>':'<span class="muted">—</span>')+'</td>'+
       '<td class="td-num">'+(x.prox>0.5?'<span class="warn">'+$m(x.prox)+'</span>':'<span class="muted">—</span>')+'</td>'+
