@@ -347,7 +347,9 @@ function prepararCheques(){
   }
 }
 // un cheque "pendiente" es el que figura como pago en EcommApp (solo o dentro de un pago agrupado) y todavía no se debitó
-function chqAbierto(c){ return c.est!=='pagado' && c.est!=='vencido'; }
+// 'acordado' = cheque rechazado (sin fondos / embargo) que después se pagó por acuerdo: cuenta como pagado.
+function estCerrado(e){ return e==='pagado' || e==='acordado' || e==='vencido'; }
+function chqAbierto(c){ return !estCerrado(c.est); }
 function chqPendiente(c){ return chqAbierto(c) && !!(c.mov||c.grupo); }
 // cheque sin debitar que la planilla da como entregado pero que NO aparece como pago en EcommApp: no se suma, se avisa
 function chqSinPago(c){ return chqAbierto(c) && !c.mov && !c.grupo; }
@@ -551,7 +553,7 @@ function abrirProveedor(p){
   const arts=[...porArt.values()].sort((a,b)=>b.v-a.v);
 
   // cuenta corriente: en "solo pagados" los cheques sin debitar no bajan el saldo
-  const filas=x.ms.map(m=>({ m, cuenta: !(soloPag && m.chq && m.chqEst && m.chqEst!=='pagado' && m.chqEst!=='vencido') }));
+  const filas=x.ms.map(m=>({ m, cuenta: !(soloPag && m.chq && m.chqEst && !estCerrado(m.chqEst)) }));
   if(soloPag) for(const c of x.cheques){ if(chqPendiente(c)&&!c.mov) filas.push({ sint:true, cuenta:true, m:{ id:0, ty:1, a:c.monto, f:c.fe||c.fp, v:c.fp, tco:'Cheque '+c.banco, nb:'N° '+c.n, ob:'Entregado y sin debitar · está dentro del pago agrupado del '+fd(c.grupo.f), tc:'', cu:'' } }); }
   filas.sort((a,b)=>a.m.f===b.m.f?a.m.id-b.m.id:a.m.f.localeCompare(b.m.f));
   let s=0, inicial=0; const lib=[];
@@ -562,7 +564,7 @@ function abrirProveedor(p){
   const chq=x.cheques.filter(c=>(c.fe||c.fp)>=DESDE||chqAbierto(c)).sort((a,b)=>(chqAbierto(b)-chqAbierto(a))||(a.fp||'').localeCompare(b.fp||''));
   const chFuera=chq.filter(chqSinPago);
   const chPend=chq.filter(chqPendiente);
-  const tagChq=c=>{ if(c.est==='pagado') return '<span class="tag ok">pagado'+(c.fdeb?' '+fd(c.fdeb):'')+'</span>'; if(c.est==='rechazado') return '<span class="tag venc">rechazado</span>'; if(c.est==='vencido') return '<span class="tag otro">vencido</span>'; const d=c.fp?dias(c.fp):0; return '<span class="tag '+(d<0?'venc':'chq')+'">'+EST_LBL[c.est]+(c.fp?(d<0?' · fecha pasada':' · en '+d+' d'):'')+'</span>'; };
+  const tagChq=c=>{ if(c.est==='pagado'||c.est==='acordado') return '<span class="tag ok">'+(c.est==='acordado'?'pagado por acuerdo':'pagado')+(c.fdeb?' '+fd(c.fdeb):'')+'</span>'; if(c.est==='rechazado') return '<span class="tag venc">rechazado</span>'; if(c.est==='vencido') return '<span class="tag otro">vencido</span>'; const d=c.fp?dias(c.fp):0; return '<span class="tag '+(d<0?'venc':'chq')+'">'+EST_LBL[c.est]+(c.fp?(d<0?' · fecha pasada':' · en '+d+' d'):'')+'</span>'; };
   const kpi=(l,v)=>'<div class="sm-kpi"><div class="sm-kpi-label">'+l+'</div><div class="sm-kpi-value">'+v+'</div></div>';
   const cls=v=>v>0.5?'pos':(v<-0.5?'neg':'');
 
@@ -584,7 +586,7 @@ function abrirProveedor(p){
 
     '<div class="sm-section"><h3>Cuenta corriente<small>desde el 20/02/26 · compras '+$m(compras)+' · pagos y NC '+$m(pagos)+'</small></h3>'+
       '<div style="max-height:460px;overflow:auto"><table class="sm-table"><thead><tr><th>Fecha</th><th>Comprobante / detalle</th>'+(UI.cta==='uni'?'<th>Cta</th>':'')+'<th class="td-num">Debe</th><th class="td-num">Haber</th><th class="td-num">Saldo</th></tr></thead><tbody>'+
-      lib.map(({r,s})=>{ const m=r.m; const esChq=!!m.chq; const et=esChq?(m.chqEst?(m.chqEst==='pagado'?' <span class="tag ok">cheque pagado</span>':' <span class="tag chq">cheque '+EST_LBL[m.chqEst]+'</span>'):' <span class="tag otro">cheque sin datos en la planilla</span>'):'';
+      lib.map(({r,s})=>{ const m=r.m; const esChq=!!m.chq; const et=esChq?(m.chqEst?(m.chqEst==='pagado'||m.chqEst==='acordado'?' <span class="tag ok">cheque pagado</span>':' <span class="tag chq">cheque '+EST_LBL[m.chqEst]+'</span>'):' <span class="tag otro">cheque sin datos en la planilla</span>'):'';
         return '<tr'+(r.sint?' class="sint"':'')+(r.cuenta?'':' style="opacity:.45"')+'><td>'+fd(m.f)+(m.v&&m.ty===1?'<div class="muted" style="font-size:9.5px">vto '+fd(m.v)+'</div>':'')+'</td><td>'+cbte(m)+et+(m.ob?'<div class="muted" style="font-size:10px">'+esc(m.ob)+'</div>':'')+(r.cuenta?'':'<div style="font-size:10px;color:var(--purple)">todavía no se debitó: no baja la deuda en esta vista</div>')+'</td>'+(UI.cta==='uni'?'<td class="muted">'+(m.cta||'1')+'</td>':'')+'<td class="td-num">'+(m.a>0?$m(m.a):'')+'</td><td class="td-num">'+(m.a<0?$m(-m.a):'')+'</td><td class="td-num '+cls(s)+'">'+(r.cuenta?$m(s):'')+'</td></tr>'; }).join('')+
       (Math.abs(inicial)>0.5?'<tr><td>'+fd(DESDE)+'</td><td class="muted">Saldo anterior al 20/02/26</td>'+(UI.cta==='uni'?'<td></td>':'')+'<td></td><td></td><td class="td-num '+cls(inicial)+'">'+$m(inicial)+'</td></tr>':'')+
       '</tbody></table></div></div>'+
