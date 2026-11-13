@@ -487,8 +487,8 @@ function render(){
   mkChart('chProv',{type:'bar',data:{labels:top.map(x=>x.p.length>26?x.p.slice(0,25)+'…':x.p),datasets:[
       {label:'Deuda',data:top.map(x=>Math.max(x.saldo,0)),backgroundColor:C.deuda,borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72},
       {label:'Stock valorizado',data:top.map(x=>x.stock),backgroundColor:C.stock,borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72}]},
-    options:{indexAxis:'y',maintainAspectRatio:false,onClick:(e,els)=>{ if(els.length) abrirProveedor(top[els[0].index].p); },
-      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{mode:'index',intersect:false,callbacks:{title:i=>top[i[0].dataIndex].p,label:c=>' '+c.dataset.label+': '+$m(c.parsed.x)}})},
+    options:{indexAxis:'y',maintainAspectRatio:false,interaction:{mode:'index',axis:'y',intersect:false},onClick:(e,els)=>{ if(els.length) abrirProveedor(top[els[0].index].p); },onHover:(e,els)=>{ e.native.target.style.cursor=els.length?'pointer':'default'; },
+      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{mode:'index',axis:'y',intersect:false,callbacks:{title:i=>top[i[0].dataIndex].p,label:c=>' '+c.dataset.label+': '+$m(c.parsed.x)}})},
       scales:{x:{ticks:{callback:v=>$k(v)}},y:{grid:{display:false},ticks:{color:'#f0ede8'}}}}});
 
   // vencimientos por mes
