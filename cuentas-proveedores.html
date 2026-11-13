@@ -338,10 +338,18 @@ function prepararCheques(){
     CHQ.push(c);
   }
   const aliasProv={}; for(const a in alias) aliasProv[a]=Object.entries(alias[a]).sort((x,y)=>y[1]-x[1])[0][0];
-  for(const c of CHQ){ if(!c.pr) c.pr=aliasProv[c.alias]||''; }
+  // cheques sin pago propio: se buscan dentro de los pagos agrupados (la observación lista los números)
+  const agrupados=D.M.filter(m=>m.ty===2&&!m.chq&&/\d{6,}/.test(m.ob||''));
+  for(const c of CHQ){
+    if(!c.mov && c.n.length>=6){ const rx=new RegExp('(^|\\D)'+c.n.replace(/^0+/,'')+'(\\D|$)'); const g=agrupados.find(m=>rx.test(m.ob)); if(g){ c.grupo=g; c.pr=g.pr; } }
+    if(!c.pr) c.pr=aliasProv[c.alias]||'';
+  }
 }
-// un cheque "pendiente" es el que se entregó (figura como pago en EcommApp) y todavía no se debitó
-function chqPendiente(c){ return c.sis && c.est!=='pagado' && c.est!=='vencido'; }
+// un cheque "pendiente" es el que figura como pago en EcommApp (solo o dentro de un pago agrupado) y todavía no se debitó
+function chqAbierto(c){ return c.est!=='pagado' && c.est!=='vencido'; }
+function chqPendiente(c){ return chqAbierto(c) && !!(c.mov||c.grupo); }
+// cheque sin debitar que la planilla da como entregado pero que NO aparece como pago en EcommApp: no se suma, se avisa
+function chqSinPago(c){ return chqAbierto(c) && !c.mov && !c.grupo; }
 // cuenta 1 / cuenta 2 de cada movimiento
 function cuentaDe(m, porId){
   if(/CTA\.?\s*2/i.test(m.ob||'')) return '2';
@@ -387,16 +395,17 @@ function calcular(){
     const cheques=(chqProv[p]||[]).filter(c=>UI.cta==='uni'||(c.mov?c.mov.cta:'1')===UI.cta);
     const chPend=cheques.filter(chqPendiente);
     const chqSin=sum(chPend,c=>c.monto);
+    const chFuera=cheques.filter(chqSinPago);
     const saldoEco=sum(ms,m=>m.a);
     const saldo=saldoEco+(UI.cheq==='pagados'?chqSin:0);
     const pen=saldoEco>0.5?pendientes(ms):[];
-    if(UI.cheq==='pagados') for(const c of chPend){ pen.push({ chq:c, pend:c.monto, m:{ id:0, ty:1, a:c.monto, f:c.fe||c.fp, v:c.fp||c.fe, tco:'Cheque '+c.banco, nb:'N° '+c.n, ob:EST_LBL[c.est]+(c.mov?'':' · sin pago propio en EcommApp'), tc:'', cu:'' } }); }
+    if(UI.cheq==='pagados') for(const c of chPend){ pen.push({ chq:c, pend:c.monto, m:{ id:0, ty:1, a:c.monto, f:c.fe||c.fp, v:c.fp||c.fe, tco:'Cheque '+c.banco, nb:'N° '+c.n, ob:EST_LBL[c.est]+(c.mov?'':' · dentro del pago agrupado del '+fd(c.grupo.f)), tc:'', cu:'' } }); }
     const venc=sum(pen.filter(d=>(d.m.v||d.m.f)<H),d=>d.pend);
     const prox=sum(pen.filter(d=>{const v=d.m.v||d.m.f; return v>=H&&v<=en30;}),d=>d.pend);
     const pagos=ms.filter(m=>m.ty===2&&m.a<0&&!/cr[eé]dito/i.test(m.tco||'')).sort((a,b)=>b.f.localeCompare(a.f));
     const futuros=pen.filter(d=>(d.m.v||d.m.f)>=H);
     const st=stockProv[p]||{valor:0,q:0,sinCosto:0};
-    P.push({ p, g, saldo, saldoEco, chqSin, nChq:chPend.length, cheques, venc, prox, pen, ms, up:pagos[0]?pagos[0].f:'', pv:futuros[0]?(futuros[0].m.v||futuros[0].m.f):'', stock:st.valor, pares:st.q, sinCosto:st.sinCosto });
+    P.push({ p, g, saldo, saldoEco, chqSin, nChq:chPend.length, chqFuera:sum(chFuera,c=>c.monto), nFuera:chFuera.length, cheques, venc, prox, pen, ms, up:pagos[0]?pagos[0].f:'', pv:futuros[0]?(futuros[0].m.v||futuros[0].m.f):'', stock:st.valor, pares:st.q, sinCosto:st.sinCosto });
   }
 }
 function visibles(){ return P.filter(x=> x.g==='merc'); }
@@ -481,7 +490,7 @@ function render(){
   renderTabla(V);
   const sinProv=P.find(x=>x.p==='(sin proveedor)');
   document.getElementById('nota').innerHTML='La deuda es el saldo de cuenta corriente de EcommApp (con IVA). El vencido y el por vencer salen del saldo pendiente de cada comprobante: se descuentan los pagos imputados a su cuota y los pagos a cuenta y notas de crédito, del comprobante más viejo al más nuevo. '+
-    'El stock se valoriza al costo de la última compra, sin IVA, y se asigna al proveedor de esa compra.'+(sinProv&&sinProv.stock>0?' Hay '+$m(sinProv.stock)+' de stock sin proveedor identificado.':'')+(UI.cheq==='pagados'?' En esta vista cada cheque entregado y todavía no debitado sigue contando como deuda, con vencimiento en su fecha de pago.':' En esta vista todo cheque entregado cuenta como pago, igual que en EcommApp, aunque todavía no se haya debitado.')+' Cuenta 1: facturas A, notas de crédito A y cheques. Cuenta 2: recibos, notas de crédito B y pagos con "CTA 2".';
+    'El stock se valoriza al costo de la última compra, sin IVA, y se asigna al proveedor de esa compra.'+(sinProv&&sinProv.stock>0?' Hay '+$m(sinProv.stock)+' de stock sin proveedor identificado.':'')+(UI.cheq==='pagados'?' En esta vista cada cheque entregado y todavía no debitado sigue contando como deuda, con vencimiento en su fecha de pago.':' En esta vista todo cheque entregado cuenta como pago, igual que en EcommApp, aunque todavía no se haya debitado.')+(sum(V,x=>x.nFuera)?' <span style="color:var(--gold)">Para revisar: '+sum(V,x=>x.nFuera)+' cheques sin debitar por '+$m(sum(V,x=>x.chqFuera))+' están en la planilla de cheques pero no figuran como pago en EcommApp; no se suman a la deuda.</span>':'')+' Cuenta 1: facturas A, notas de crédito A y cheques. Cuenta 2: recibos, notas de crédito B y pagos con "CTA 2".';
 }
 
 function renderTabla(V){
@@ -524,14 +533,15 @@ function abrirProveedor(p){
 
   // cuenta corriente: en "solo pagados" los cheques sin debitar no bajan el saldo
   const filas=x.ms.map(m=>({ m, cuenta: !(soloPag && m.chq && m.chqEst && m.chqEst!=='pagado' && m.chqEst!=='vencido') }));
-  if(soloPag) for(const c of x.cheques){ if(chqPendiente(c)&&!c.mov) filas.push({ sint:true, cuenta:true, m:{ id:0, ty:1, a:c.monto, f:c.fe||c.fp, v:c.fp, tco:'Cheque '+c.banco, nb:'N° '+c.n, ob:'Entregado y sin debitar · no tiene un pago propio en EcommApp (la planilla lo da como pasado en sistema)', tc:'', cu:'' } }); }
+  if(soloPag) for(const c of x.cheques){ if(chqPendiente(c)&&!c.mov) filas.push({ sint:true, cuenta:true, m:{ id:0, ty:1, a:c.monto, f:c.fe||c.fp, v:c.fp, tco:'Cheque '+c.banco, nb:'N° '+c.n, ob:'Entregado y sin debitar · está dentro del pago agrupado del '+fd(c.grupo.f), tc:'', cu:'' } }); }
   filas.sort((a,b)=>a.m.f===b.m.f?a.m.id-b.m.id:a.m.f.localeCompare(b.m.f));
   let s=0, inicial=0; const lib=[];
   for(const r of filas){ if(r.cuenta) s+=r.m.a; if(r.m.f<DESDE){ inicial=s; continue; } lib.push({ r, s }); }
   lib.reverse();
   const compras=sum(filas.filter(r=>r.cuenta&&r.m.a>0&&!r.sint&&r.m.f>=DESDE),r=>r.m.a), pagos=-sum(filas.filter(r=>r.cuenta&&r.m.a<0&&r.m.f>=DESDE),r=>r.m.a);
 
-  const chq=x.cheques.filter(c=>(c.fe||c.fp)>=DESDE||chqPendiente(c)).sort((a,b)=>(chqPendiente(b)-chqPendiente(a))||(a.fp||'').localeCompare(b.fp||''));
+  const chq=x.cheques.filter(c=>(c.fe||c.fp)>=DESDE||chqAbierto(c)).sort((a,b)=>(chqAbierto(b)-chqAbierto(a))||(a.fp||'').localeCompare(b.fp||''));
+  const chFuera=chq.filter(chqSinPago);
   const chPend=chq.filter(chqPendiente);
   const tagChq=c=>{ if(c.est==='pagado') return '<span class="tag ok">pagado'+(c.fdeb?' '+fd(c.fdeb):'')+'</span>'; if(c.est==='rechazado') return '<span class="tag venc">rechazado</span>'; if(c.est==='vencido') return '<span class="tag otro">vencido</span>'; const d=c.fp?dias(c.fp):0; return '<span class="tag '+(d<0?'venc':'chq')+'">'+EST_LBL[c.est]+(c.fp?(d<0?' · fecha pasada':' · en '+d+' d'):'')+'</span>'; };
   const kpi=(l,v)=>'<div class="sm-kpi"><div class="sm-kpi-label">'+l+'</div><div class="sm-kpi-value">'+v+'</div></div>';
@@ -548,9 +558,9 @@ function abrirProveedor(p){
       pen.map(d=>{ const v=d.m.v||d.m.f, dd=dias(v); return '<tr'+(d.chq?' class="sint"':'')+'><td>'+fd(d.m.f)+'</td><td>'+cbte(d.m)+(d.m.ob?'<div class="muted" style="font-size:10px">'+esc(d.m.ob)+'</div>':'')+'</td><td>'+fd(v)+'</td><td class="td-num">'+$m(d.m.a)+'</td><td class="td-num">'+(d.m.a-d.pend>0.5?$m(d.m.a-d.pend):'—')+'</td><td class="td-num"><b>'+$m(d.pend)+'</b></td><td>'+(dd<0?'<span class="tag venc">'+(d.chq?'fecha pasada hace ':'vencido hace ')+(-dd)+' d</span>':(dd<=30?'<span class="tag prox">'+(d.chq?'se debita en ':'vence en ')+dd+' d</span>':'<span class="tag ok">en '+dd+' d</span>'))+'</td></tr>'; }).join('')+'</tbody></table>'
       :'<div class="note" style="margin:0">'+(x.saldo<-0.5?'No le debemos: hay saldo a favor nuestro de '+$m(-x.saldo)+'.':'No hay nada pendiente.')+'</div>')+'</div>'+
 
-    '<div class="sm-section"><h3>Cheques<small>'+chq.length+' desde el 20/02/26 · '+chPend.length+' sin debitar por '+$m(sum(chPend,c=>c.monto))+'</small></h3>'+(chq.length?
+    '<div class="sm-section"><h3>Cheques<small>'+chq.length+' desde el 20/02/26 · '+chPend.length+' sin debitar por '+$m(sum(chPend,c=>c.monto))+(chFuera.length?' · '+chFuera.length+' sin cargar en EcommApp por '+$m(sum(chFuera,c=>c.monto)):'')+'</small></h3>'+(chq.length?
       '<div style="max-height:300px;overflow:auto"><table class="sm-table"><thead><tr><th>Banco</th><th>N°</th><th>Emisión</th><th>Fecha de pago</th><th class="td-num">Monto</th><th>Estado</th></tr></thead><tbody>'+
-      chq.map(c=>'<tr><td>'+esc(c.banco)+'</td><td>'+esc(c.n)+'</td><td>'+fd(c.fe)+'</td><td>'+fd(c.fp)+'</td><td class="td-num">'+$m(c.monto)+'</td><td>'+tagChq(c)+(c.mov?'':' <span class="muted" title="No hay un pago con este número en EcommApp: está dentro de un pago agrupado o falta cargarlo">· sin pago propio</span>')+'</td></tr>').join('')+'</tbody></table></div>'
+      chq.map(c=>'<tr><td>'+esc(c.banco)+'</td><td>'+esc(c.n)+'</td><td>'+fd(c.fe)+'</td><td>'+fd(c.fp)+'</td><td class="td-num">'+$m(c.monto)+'</td><td>'+tagChq(c)+(c.mov?'':(c.grupo?' <span class="muted">· en el pago agrupado del '+fd(c.grupo.f)+'</span>':(chqAbierto(c)?' <span class="warn" title="Está en la planilla de cheques y no hay ningún pago con este número en EcommApp">· no figura como pago en EcommApp</span>':'')))+'</td></tr>').join('')+'</tbody></table></div>'
       :'<div class="note" style="margin:0">Sin cheques para este proveedor en la planilla de cheques.</div>')+'</div>'+
 
     '<div class="sm-section"><h3>Cuenta corriente<small>desde el 20/02/26 · compras '+$m(compras)+' · pagos y NC '+$m(pagos)+'</small></h3>'+
