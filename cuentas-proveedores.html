@@ -154,7 +154,7 @@ footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color
   <div class="ctl"><span class="range-label">Stock · temporada</span>
     <div class="preset-btns" id="tempBtns"></div>
   </div>
-  <div class="ctl" style="margin-left:auto"><input class="search" id="q" placeholder="Buscar proveedor…" oninput="render()"></div>
+  <div class="ctl" style="margin-left:auto"><input class="search" id="q" placeholder="Buscar proveedor o marca…" oninput="render()"></div>
 </div>
 
 <div class="banner err" id="err"></div>
@@ -297,6 +297,8 @@ function preparar(){
     if(pr&&inf.marca){ const m=provMarca[inf.marca]=provMarca[inf.marca]||{}; m[pr]=(m[pr]||0)+Math.max(q,0); }
   }
   const marcaProv={}; for(const m in provMarca){ marcaProv[m]=Object.entries(provMarca[m]).sort((a,b)=>b[1]-a[1])[0][0]; }
+  const nombresCta=[...new Set(D.M.map(m=>m.pr))];
+  for(const m in MARCA_PROV){ if(!marcaProv[m]){ const n=nombresCta.find(x=>MARCA_PROV[m].test(sinTilde(x))); if(n) marcaProv[m]=n; } }
   const bi={}; for(const r of S.bi){ const sku=String(r.sku||'').toUpperCase(); const ct=num(r.costo_total||0), q=num(r.cantidad||1); if(sku&&q>0&&ct>0){ (bi[sku]=bi[sku]||{t:0,q:0}); bi[sku].t+=ct; bi[sku].q+=q; } }
   const cat={}; for(const r of S.costos){ const a=String(r.ARTICULO==null?'':r.ARTICULO).trim().toUpperCase(), t=String(r.TEMPORADA||'').trim().toUpperCase(), c=num(r.COSTO); if(a&&t&&c>0) cat[a+'|'+t]=c; }
 
@@ -371,6 +373,23 @@ const CTAS_PROV = [
   [/FERNANDEZ BEYRO/i, '1'],     // LAPOPIE
   [/LITWAK/i, '1']
 ];
+// Nombre comercial con el que Pablo conoce a cada proveedor (13/11/2026). Se muestra ese; la razón social queda al lado.
+const ALIAS_PROV = [
+  [/VAMELI/i, 'VL'],
+  [/UHART/i, 'SARA'],
+  [/TOFIARO/i, 'NF'],
+  [/RIOS FORNASARI/i, 'PREGO'],
+  [/SE VE/i, 'CB'],
+  [/FERNANDEZ BEYRO/i, 'LAPOPIE'],
+  [/BAIYUN/i, 'AD'],
+  [/JUANILLA/i, 'JUANITA SHOES'],
+  [/NEW DREAMS/i, 'MI'],
+  [/KATAKALI/i, 'KATAKALI']
+];
+function sinTilde(p){ return String(p||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function nom(p){ const n=sinTilde(p); for(const [rx,v] of ALIAS_PROV){ if(rx.test(n)) return v; } return String(p||''); }
+// Marcas sin compras cargadas en EcommApp: a qué proveedor pertenece su stock.
+const MARCA_PROV = { MI:/NEW DREAMS/i, KA:/KATAKALI/i };
 function ctasDe(p){ const n=String(p||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); for(const [rx,v] of CTAS_PROV){ if(rx.test(n)) return v; } return ''; }
 // cuenta 1 / cuenta 2 de cada movimiento
 function esCheque(m){ return m.ty===2 && (!!m.chq || !!m.chqGrupo || (/CHEQUE/i.test(m.ob||'') && !/CTA\.?\s*2/i.test(m.ob||''))); }
@@ -486,11 +505,11 @@ function render(){
   // deuda y stock por proveedor
   const top=V.filter(x=>x.saldo>0.5||x.stock>0.5).sort((a,b)=>Math.max(b.saldo,b.stock)-Math.max(a.saldo,a.stock)).slice(0,12);
   document.getElementById('subProv').textContent='Los '+top.length+' más grandes · '+grp+' · stock de '+lblTemps();
-  mkChart('chProv',{type:'bar',data:{labels:top.map(x=>x.p.length>26?x.p.slice(0,25)+'…':x.p),datasets:[
+  mkChart('chProv',{type:'bar',data:{labels:top.map(x=>nom(x.p)),datasets:[
       {label:'Deuda',data:top.map(x=>Math.max(x.saldo,0)),backgroundColor:C.deuda,borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72},
       {label:'Stock valorizado',data:top.map(x=>x.stock),backgroundColor:C.stock,borderRadius:{topRight:4,bottomRight:4},barPercentage:.8,categoryPercentage:.72}]},
     options:{indexAxis:'y',maintainAspectRatio:false,interaction:{mode:'index',axis:'y',intersect:false},onClick:(e,els)=>{ if(els.length) abrirProveedor(top[els[0].index].p); },onHover:(e,els)=>{ e.native.target.style.cursor=els.length?'pointer':'default'; },
-      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{mode:'index',axis:'y',intersect:false,callbacks:{title:i=>top[i[0].dataIndex].p,label:c=>' '+c.dataset.label+': '+$m(c.parsed.x)}})},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{mode:'index',axis:'y',intersect:false,callbacks:{title:i=>{ const p=top[i[0].dataIndex].p; return nom(p)===p?p:nom(p)+' · '+p; },label:c=>' '+c.dataset.label+': '+$m(c.parsed.x)}})},
       scales:{x:{ticks:{callback:v=>$k(v)}},y:{grid:{display:false},ticks:{color:'#f0ede8'}}}}});
 
   // vencimientos por mes
@@ -519,16 +538,16 @@ function render(){
 
 function renderTabla(V){
   const q=(document.getElementById('q').value||'').toLowerCase();
-  let filas=V.filter(x=>(Math.abs(x.saldo)>0.5||x.stock>0.5||x.chqSin>0.5)&&(!q||x.p.toLowerCase().includes(q)));
+  let filas=V.filter(x=>(Math.abs(x.saldo)>0.5||x.stock>0.5||x.chqSin>0.5)&&(!q||x.p.toLowerCase().includes(q)||nom(x.p).toLowerCase().includes(q)));
   const k=orden.k, d=orden.d;
-  filas.sort((a,b)=>{ const va=a[k], vb=b[k]; return (typeof va==='string'?va.localeCompare(vb):(va-vb))*d; });
+  filas.sort((a,b)=>{ const va=k==='p'?nom(a.p):a[k], vb=k==='p'?nom(b.p):b[k]; return (typeof va==='string'?va.localeCompare(vb):(va-vb))*d; });
   const mx=Math.max(1,...filas.map(x=>Math.max(x.saldo,x.stock)));
   const TG={merc:'<span class="tag art">mercadería</span>',ins:'<span class="tag ins">insumos</span>',otro:'<span class="tag otro">otros</span>'};
   const cols=[['p','Proveedor',0],['saldo','Saldo hoy',1],['venc','Vencido',1],['prox','Vence 30 días',1],['chqSin','Cheques sin debitar',1],['stock','Stock valorizado',1],['_bar','Deuda vs stock',0],['pv','Próximo venc.',1],['up','Último pago',1]];
   document.getElementById('cntProv').textContent=filas.length+' proveedores';
   document.getElementById('tProv').innerHTML='<thead><tr>'+cols.map(c=>'<th class="'+(c[2]?'td-num':'')+(orden.k===c[0]?' sorted':'')+'" '+(c[0]==='_bar'?'':'onclick="ordenar(\''+c[0]+'\')"')+'>'+c[1]+(orden.k===c[0]?(orden.d<0?' ↓':' ↑'):'')+'</th>').join('')+'</tr></thead><tbody>'+
     (filas.length?filas.map(x=>'<tr onclick="abrirProveedor(\''+esc(x.p).replace(/'/g,"\\'")+'\')">'+
-      '<td><b>'+esc(x.p)+'</b> '+(x.ctas?'<span class="tag '+(x.ctas==='12'?'warn2':'otro')+'">'+(x.ctas==='12'?'cta 1 y 2':'solo cta '+x.ctas)+'</span>':'<span class="tag otro" title="Todavía no está definido qué cuentas lleva este proveedor">cuentas sin definir</span>')+'</td>'+
+      '<td><b>'+esc(nom(x.p))+'</b> '+(nom(x.p)!==x.p?'<span class="muted" style="font-size:10.5px;margin-right:6px">'+esc(x.p)+'</span>':'')+(x.ctas?'<span class="tag '+(x.ctas==='12'?'warn2':'otro')+'">'+(x.ctas==='12'?'cta 1 y 2':'solo cta '+x.ctas)+'</span>':'<span class="tag otro" title="Todavía no está definido qué cuentas lleva este proveedor">cuentas sin definir</span>')+'</td>'+
       '<td class="td-num '+(x.saldo>0.5?'pos':(x.saldo<-0.5?'neg':'muted'))+'">'+$m(x.saldo)+'</td>'+
       '<td class="td-num">'+(x.venc>0.5?'<span class="pos">'+$m(x.venc)+'</span>':'<span class="muted">—</span>')+'</td>'+
       '<td class="td-num">'+(x.prox>0.5?'<span class="warn">'+$m(x.prox)+'</span>':'<span class="muted">—</span>')+'</td>'+
@@ -571,7 +590,7 @@ function abrirProveedor(p){
   const kpi=(l,v)=>'<div class="sm-kpi"><div class="sm-kpi-label">'+l+'</div><div class="sm-kpi-value">'+v+'</div></div>';
   const cls=v=>v>0.5?'pos':(v<-0.5?'neg':'');
 
-  abrirModal('Proveedor de mercadería · '+lblVista(), p,
+  abrirModal('Proveedor de mercadería · '+lblVista(), nom(p)===p?p:nom(p)+' · '+p,
     '<div class="sm-kpis">'+kpi(soloPag?'Deuda real hoy':'Saldo hoy (EcommApp)','<span class="'+cls(x.saldo)+'">'+$m(x.saldo)+'</span>')+kpi('Cheques sin debitar',x.chqSin>0.5?'<span style="color:var(--purple)">'+$m(x.chqSin)+'</span>':'—')+kpi('Vencido',x.venc>0.5?'<span class="pos">'+$m(x.venc)+'</span>':'—')+kpi('Stock valorizado',x.stock>0.5?$m(x.stock):'—')+'</div>'+
     '<div class="sm-section" style="padding-top:12px;padding-bottom:12px"><div class="note" style="margin:0">'+(soloPag
       ?'Saldo de EcommApp '+$m(x.saldoEco)+' + cheques entregados sin debitar '+$m(x.chqSin)+' = <b style="color:var(--text)">'+$m(x.saldo)+'</b>.'
