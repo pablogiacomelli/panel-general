@@ -367,7 +367,9 @@ const CTAS_PROV = [
   [/SE VE/i, '1'],              // CB
   [/MARIA DEL VALLE/i, '2'],
   [/NEW DREAMS/i, '1'],          // MI (Mistika)
-  [/BAIYUN/i, '1']               // AD (Adoratta)
+  [/BAIYUN/i, '1'],              // AD (Adoratta)
+  [/FERNANDEZ BEYRO/i, '1'],     // LAPOPIE
+  [/LITWAK/i, '1']
 ];
 function ctasDe(p){ const n=String(p||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); for(const [rx,v] of CTAS_PROV){ if(rx.test(n)) return v; } return ''; }
 // cuenta 1 / cuenta 2 de cada movimiento
