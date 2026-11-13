@@ -147,7 +147,7 @@ footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color
   <div class="ctl"><span class="range-label">Cuenta</span>
     <div class="preset-btns" id="ctaBtns">
       <button class="preset-btn" data-t="uni" onclick="setCta('uni')">Unificada</button>
-      <button class="preset-btn" data-t="1" onclick="setCta('1')" title="Facturas A, notas de crédito A y cheques">Cuenta 1</button>
+      <button class="preset-btn" data-t="1" onclick="setCta('1')" title="Cheques (siempre), facturas A y notas de crédito A">Cuenta 1</button>
       <button class="preset-btn" data-t="2" onclick="setCta('2')" title="Recibos, notas de crédito B y pagos con CTA 2">Cuenta 2</button>
     </div>
   </div>
@@ -342,7 +342,7 @@ function prepararCheques(){
   // cheques sin pago propio: se buscan dentro de los pagos agrupados (la observación lista los números)
   const agrupados=D.M.filter(m=>m.ty===2&&!m.chq&&/\d{6,}/.test(m.ob||''));
   for(const c of CHQ){
-    if(!c.mov && c.n.length>=6){ const rx=new RegExp('(^|\\D)'+c.n.replace(/^0+/,'')+'(\\D|$)'); const g=agrupados.find(m=>rx.test(m.ob)); if(g){ c.grupo=g; c.pr=g.pr; } }
+    if(!c.mov && c.n.length>=6){ const rx=new RegExp('(^|\\D)'+c.n.replace(/^0+/,'')+'(\\D|$)'); const g=agrupados.find(m=>rx.test(m.ob)); if(g){ c.grupo=g; c.pr=g.pr; g.chqGrupo=true; } }
     if(!c.pr) c.pr=aliasProv[c.alias]||'';
   }
 }
@@ -352,7 +352,8 @@ function chqPendiente(c){ return chqAbierto(c) && !!(c.mov||c.grupo); }
 // cheque sin debitar que la planilla da como entregado pero que NO aparece como pago en EcommApp: no se suma, se avisa
 function chqSinPago(c){ return chqAbierto(c) && !c.mov && !c.grupo; }
 // Qué cuentas lleva cada proveedor (definido por Pablo el 13/11/2026).
-// '1' o '2' = lleva una sola cuenta: todos sus movimientos y cheques van ahí.
+// '1' o '2' = lleva una sola cuenta: todos sus movimientos van ahí.
+// Regla de Pablo (13/11/2026): en los proveedores con dos cuentas, los cheques van SIEMPRE a Cuenta 1.
 // '12' = lleva las dos: cada movimiento se reparte con la regla de cuentaDe().
 const CTAS_PROV = [
   [/VAMELI/i, '12'],
@@ -365,9 +366,10 @@ const CTAS_PROV = [
 ];
 function ctasDe(p){ const n=String(p||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); for(const [rx,v] of CTAS_PROV){ if(rx.test(n)) return v; } return ''; }
 // cuenta 1 / cuenta 2 de cada movimiento
+function esCheque(m){ return m.ty===2 && (!!m.chq || !!m.chqGrupo || (/CHEQUE/i.test(m.ob||'') && !/CTA\.?\s*2/i.test(m.ob||''))); }
 function cuentaDe(m, porId){
+  if(esCheque(m)) return '1';
   if(/CTA\.?\s*2/i.test(m.ob||'')) return '2';
-  if(m.chq) return '1';
   if(m.ty===2 && m.cc && porId && porId[m.cc]) return cuentaDe(porId[m.cc], null);
   const t=String(m.tco||'');
   if(/recibo/i.test(t)) return '2';
@@ -407,7 +409,7 @@ function calcular(){
     todos.forEach(m=>{ m.cta=fija||cuentaDe(m,porId); });
     const ms=UI.cta==='uni'?todos:todos.filter(m=>m.cta===UI.cta);
     const g=GRUPO[p]||(stockProv[p]?'merc':'otro');
-    const cheques=(chqProv[p]||[]).filter(c=>UI.cta==='uni'||(fija||(c.mov?c.mov.cta:(c.grupo&&c.grupo.cta)||'1'))===UI.cta);
+    const cheques=(chqProv[p]||[]).filter(c=>UI.cta==='uni'||(fija||'1')===UI.cta);   // con dos cuentas, los cheques son siempre de Cuenta 1
     const chPend=cheques.filter(chqPendiente);
     const chqSin=sum(chPend,c=>c.monto);
     const chFuera=cheques.filter(chqSinPago);
@@ -505,7 +507,7 @@ function render(){
   renderTabla(V);
   const sinProv=P.find(x=>x.p==='(sin proveedor)');
   document.getElementById('nota').innerHTML='La deuda es el saldo de cuenta corriente de EcommApp (con IVA). El vencido y el por vencer salen del saldo pendiente de cada comprobante: se descuentan los pagos imputados a su cuota y los pagos a cuenta y notas de crédito, del comprobante más viejo al más nuevo. '+
-    'El stock se valoriza al costo de la última compra, sin IVA, y se asigna al proveedor de esa compra.'+(sinProv&&sinProv.stock>0?' Hay '+$m(sinProv.stock)+' de stock sin proveedor identificado.':'')+(UI.cheq==='pagados'?' En esta vista cada cheque entregado y todavía no debitado sigue contando como deuda, con vencimiento en su fecha de pago.':' En esta vista todo cheque entregado cuenta como pago, igual que en EcommApp, aunque todavía no se haya debitado.')+(sum(V,x=>x.nFuera)?' <span style="color:var(--gold)">Para revisar: '+sum(V,x=>x.nFuera)+' cheques sin debitar por '+$m(sum(V,x=>x.chqFuera))+' están en la planilla de cheques pero no figuran como pago en EcommApp; no se suman a la deuda.</span>':'')+' Los proveedores con una sola cuenta tienen todo en esa cuenta. En los que llevan las dos: Cuenta 1 son facturas A, notas de crédito A y cheques; Cuenta 2 son recibos, notas de crédito B y pagos con "CTA 2" en la observación.';
+    'El stock se valoriza al costo de la última compra, sin IVA, y se asigna al proveedor de esa compra.'+(sinProv&&sinProv.stock>0?' Hay '+$m(sinProv.stock)+' de stock sin proveedor identificado.':'')+(UI.cheq==='pagados'?' En esta vista cada cheque entregado y todavía no debitado sigue contando como deuda, con vencimiento en su fecha de pago.':' En esta vista todo cheque entregado cuenta como pago, igual que en EcommApp, aunque todavía no se haya debitado.')+(sum(V,x=>x.nFuera)?' <span style="color:var(--gold)">Para revisar: '+sum(V,x=>x.nFuera)+' cheques sin debitar por '+$m(sum(V,x=>x.chqFuera))+' están en la planilla de cheques pero no figuran como pago en EcommApp; no se suman a la deuda.</span>':'')+' Los proveedores con una sola cuenta tienen todo en esa cuenta, cheques incluidos. En los que llevan las dos: Cuenta 1 son los cheques (siempre), las facturas A y las notas de crédito A; Cuenta 2 son recibos, notas de crédito B y pagos con "CTA 2" en la observación.';
 }
 
 function renderTabla(V){
