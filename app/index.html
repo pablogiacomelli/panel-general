@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<script>
+  // Login único de los paneles (sesión compartida en pablogiacomelli.github.io). En la prueba local no se carga.
+  if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.write('<script src="https://pablogiacomelli.github.io/panel-general/auth.js"><\/script>');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MAHRA · Gestión</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0f0d;--bg2:#171714;--bg3:#1e1e1a;--line:rgba(255,255,255,.10);--text:#f0ede8;--muted:#9a9690;--gold:#d4a853;
+  --ventas:#d4a853;--stock:#6fae8e;--finanzas:#7a9fd4;--marketing:#c47ab0;--equipo:#b0a27a;
+  --nav-h:62px;--top-h:52px;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:"DM Sans",-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:var(--safe-t)}
+
+/* barra de arriba */
+#top{flex:0 0 auto;border-bottom:1px solid var(--line);background:var(--bg)}
+.top-row{height:var(--top-h);display:flex;align-items:center;gap:8px;padding:0 8px 0 16px}
+.top-row h1{flex:1;min-width:0;margin:0;font:300 19px/1.1 Fraunces,Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-row h1 em{color:var(--gold);font-style:italic}
+.ico{width:40px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:10px}
+.ico:active,.ico:hover{background:var(--bg3);color:var(--text)}
+.ico svg{width:20px;height:20px}
+.ico[hidden]{display:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 12px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips[hidden]{display:none}
+.chip{flex:0 0 auto;padding:7px 13px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);white-space:nowrap}
+.chip.on{background:var(--c,var(--gold));border-color:var(--c,var(--gold));color:#111;font-weight:500}
+
+/* contenido */
+#main{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none}
+.view.on{display:block}
+#frames{position:absolute;inset:0;display:none;background:var(--bg)}
+#frames.on{display:block}
+#frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
+#frames iframe.on{display:block}
+.cargando{position:absolute;inset:0;display:none;place-items:center;color:var(--muted);font-size:13px;pointer-events:none}
+.cargando.on{display:grid}
+
+/* inicio y más */
+.wrap{padding:18px 16px calc(24px + var(--safe-b));max-width:760px;margin:0 auto}
+.hola{margin:4px 0 2px;font:300 26px/1.2 Fraunces,Georgia,serif}
+.hola em{color:var(--gold);font-style:italic}
+.fecha{color:var(--muted);font-size:13px;margin-bottom:18px}
+.grupo{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:14px;padding:14px 14px 6px;margin-bottom:12px}
+.grupo h2{margin:0 0 2px;font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px}
+.grupo h2 span{font-size:18px}
+.grupo p{margin:0 0 8px;color:var(--muted);font-size:12.5px;line-height:1.45}
+.panel{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 2px;border-top:1px solid var(--line);font-size:14.5px}
+.panel:first-of-type{border-top:0}
+.panel small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.panel .tx{flex:1;min-width:0}
+.panel .fl{color:var(--muted);font-size:18px}
+.panel:active{opacity:.6}
+.nota{color:var(--muted);font-size:12px;line-height:1.5;margin:18px 2px 0}
+.acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;background:var(--bg2)}
+.btn.gold{background:var(--gold);color:#111;border-color:var(--gold);font-weight:500}
+.btn[hidden]{display:none}
+
+/* barra de abajo */
+#nav{order:2;flex:0 0 auto;height:calc(var(--nav-h) + var(--safe-b));padding-bottom:var(--safe-b);display:flex;border-top:1px solid var(--line);background:var(--bg)}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-size:11px;letter-spacing:.02em}
+#nav button svg{width:22px;height:22px}
+#nav button.on{color:var(--c,var(--gold))}
+#nav button.on .pill{background:color-mix(in srgb,var(--c,var(--gold)) 18%,transparent)}
+.pill{padding:3px 16px;border-radius:999px;display:grid;place-items:center}
+
+/* pantalla ancha: la barra pasa a la izquierda */
+@media (min-width:900px){
+  #app{flex-direction:row}
+  #nav{order:-1;flex-direction:column;justify-content:flex-start;width:84px;height:auto;padding:12px 0;border-top:0;border-right:1px solid var(--line)}
+  #nav button{flex:0 0 72px}
+  .col{flex:1;min-width:0;display:flex;flex-direction:column}
+}
+@media (max-width:899px){.col{flex:1;min-height:0;display:flex;flex-direction:column}}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav" aria-label="Secciones"></nav>
+  <div class="col">
+    <header id="top">
+      <div class="top-row">
+        <button class="ico" id="bAtras" aria-label="Volver" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h1 id="titulo">MAHRA · <em>Gestión</em></h1>
+        <button class="ico" id="bRecargar" aria-label="Actualizar el panel" title="Actualizar" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>
+        <a class="ico" id="bAparte" aria-label="Abrir aparte" title="Abrir aparte" target="_blank" rel="noopener" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>
+      </div>
+      <div class="chips" id="chips" hidden></div>
+    </header>
+    <main id="main">
+      <section class="view" id="v-inicio"></section>
+      <section class="view" id="v-mas"></section>
+      <div id="frames"><div class="cargando" id="cargando">Cargando…</div></div>
+    </main>
+  </div>
+</div>
+
+<script>
+const PG = 'https://pablogiacomelli.github.io/';
+const N8N = 'https://n8n.mahra-ai.online/webhook/';
+// Grupos y paneles de la app (solo gestión; los paneles operativos de EcommApp quedan afuera).
+const GRUPOS = {
+  ventas:   { nombre:'Ventas', emoji:'💰', c:'var(--ventas)', desc:'Lo vendido por local, tienda online y Kommo, y cómo se cobra.', paneles:[
+    { n:'Ventas Generales', d:'Panel, comparativas, vendedoras y clientas', url:PG+'ventas-dashboard/' },
+    { n:'Formas de cobro', d:'Tarjeta, cuotas, bancos y costo de Mercado Pago', url:PG+'panel-general/formas-cobro.html' } ]},
+  stock:    { nombre:'Stock y Compras', corto:'Stock', emoji:'📦', c:'var(--stock)', desc:'Stock por temporada, compras y cuentas con proveedores.', paneles:[
+    { n:'Stock Intelligence', d:'Temporadas, análisis de artículos, pedidos e insumos', url:PG+'stock-dashboard/' },
+    { n:'Compras', d:'Compras de artículos e insumos', url:PG+'panel-general/compras.html' },
+    { n:'Cuentas proveedores', d:'Cuenta corriente, cheques y stock por temporada', url:PG+'panel-general/cuentas-proveedores.html' } ]},
+  finanzas: { nombre:'Finanzas', emoji:'🏦', c:'var(--finanzas)', desc:'Flujo de fondos, cheques, gastos del mes y servicios.', paneles:[
+    { n:'Flujo financiero', d:'Ingresos y egresos', url:PG+'flujo-financiero/' },
+    { n:'Cheques', d:'Emitidos, débitos y resumen', url:PG+'control-cheques/' },
+    { n:'Gastos mensuales', d:'Pagos de gastos del mes', url:PG+'panel-general/gastos-mensuales.html' },
+    { n:'Servicios', d:'Luz EPE: deuda, convenio y consumos', url:PG+'panel-general/servicios.html' } ]},
+  marketing:{ nombre:'Marketing', emoji:'📣', c:'var(--marketing)', desc:'Redes, Google, tráfico de la tienda y mails.', paneles:[
+    { n:'Panel de Marketing', d:'Instagram y Google Business', url:N8N+'ig-dashboard-mh26' },
+    { n:'GA4', d:'Tráfico de la tienda y bots', url:PG+'ga4-dashboard/' },
+    { n:'Tablero Perfit', d:'Resultados de mails y automatizaciones', url:N8N+'perfit-tablero' },
+    { n:'Campañas Perfit', d:'Plan semanal de campañas', url:N8N+'perfit-panel' } ]},
+  equipo:   { nombre:'Equipo', emoji:'👥', c:'var(--equipo)', desc:'Tareas del equipo.', paneles:[
+    { n:'Tablero de tareas', d:'Se abre aparte, en claude.ai', url:'https://claude.ai/artifact/G1GVsXeekRv3Wnx6kP9BvV', aparte:true } ]}
+};
+const ORDEN = ['ventas','stock','finanzas','marketing','equipo'];
+const NAV = [
+  { k:'inicio', n:'Inicio', c:'var(--gold)', svg:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>' },
+  { k:'ventas', n:'Ventas', c:'var(--ventas)', svg:'<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>' },
+  { k:'stock', n:'Stock', c:'var(--stock)', svg:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>' },
+  { k:'finanzas', n:'Finanzas', c:'var(--finanzas)', svg:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h4"/>' },
+  { k:'mas', n:'Más', c:'var(--gold)', svg:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>' }
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const ultimo = {};               // último panel abierto de cada grupo
+let actual = { k:'inicio', i:0 };
+
+function navHTML(){
+  $('nav').innerHTML = NAV.map(b => `<button type="button" data-nav="${b.k}" style="--c:${b.c}" aria-label="${b.n}">
+    <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${b.svg}</svg></span>${b.n}</button>`).join('');
+}
+function grupoHTML(k){
+  const g = GRUPOS[k];
+  return `<div class="grupo" style="--c:${g.c}"><h2><span>${g.emoji}</span>${esc(g.nombre)}</h2><p>${esc(g.desc)}</p>` +
+    g.paneles.map((p,i) => `<button type="button" class="panel" data-abrir="${k}" data-i="${i}"><span class="tx">${esc(p.n)}<small>${esc(p.d)}</small></span><span class="fl">${p.aparte?'↗':'›'}</span></button>`).join('') + '</div>';
+}
+function inicioHTML(){
+  const h = new Date().getHours();
+  const saludo = h < 13 ? 'Buen día' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
+  let fecha = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  fecha = fecha.charAt(0).toUpperCase() + fecha.slice(1);
+  $('v-inicio').innerHTML = `<div class="wrap"><div class="hola">${saludo}, <em>Pablo</em></div><div class="fecha">${fecha}</div>` +
+    ORDEN.map(grupoHTML).join('') + '</div>';
+}
+function masHTML(){
+  $('v-mas').innerHTML = `<div class="wrap">${grupoHTML('marketing')}${grupoHTML('equipo')}
+    <div class="acc"><button type="button" class="btn gold" id="bInstalar" hidden>Instalar la app</button>
+    <button type="button" class="btn" id="bSalir">Cerrar sesión</button></div>
+    <p class="nota">Los paneles se actualizan solos cuando se publican cambios: no hace falta reinstalar la app.</p></div>`;
+}
+
+function iframePara(url){
+  let f = [...$('frames').querySelectorAll('iframe')].find(x => x.dataset.url === url);
+  if (!f){
+    f = document.createElement('iframe');
+    f.dataset.url = url; f.src = url; f.title = url; f.loading = 'eager';
+    f.setAttribute('allow', 'clipboard-write; fullscreen');
+    $('cargando').classList.add('on');
+    f.addEventListener('load', () => { if (f.classList.contains('on')) $('cargando').classList.remove('on'); });
+    $('frames').appendChild(f);
+  } else $('cargando').classList.remove('on');
+  return f;
+}
+
+function mostrar(k, i, push){
+  if (k !== 'inicio' && k !== 'mas' && !GRUPOS[k]) k = 'inicio';
+  if (GRUPOS[k]){
+    i = (i === undefined || i === null) ? (ultimo[k] || 0) : i;
+    if (!GRUPOS[k].paneles[i]) i = 0;
+    if (GRUPOS[k].paneles[i].aparte){ window.open(GRUPOS[k].paneles[i].url, '_blank', 'noopener'); return; }
+    ultimo[k] = i;
+  }
+  const antes = actual.k + '-' + actual.i;
+  actual = { k, i: i || 0 };
+  const tab = (k === 'marketing' || k === 'equipo') ? 'mas' : k;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.nav === tab));
+  $('v-inicio').classList.toggle('on', k === 'inicio');
+  $('v-mas').classList.toggle('on', k === 'mas');
+  const g = GRUPOS[k];
+  $('frames').classList.toggle('on', !!g);
+  $('bAtras').hidden = !(k === 'marketing' || k === 'equipo');
+  $('bRecargar').hidden = $('bAparte').hidden = !g;
+  if (g){
+    const p = g.paneles[i];
+    const f = iframePara(p.url);
+    $('frames').querySelectorAll('iframe').forEach(x => x.classList.toggle('on', x === f));
+    $('titulo').innerHTML = esc(p.n);
+    $('bAparte').href = p.url;
+    const ch = $('chips');
+    ch.hidden = g.paneles.length < 2;
+    ch.style.setProperty('--c', g.c);
+    ch.innerHTML = g.paneles.map((q,j) => `<button type="button" class="chip${j===i?' on':''}" data-abrir="${k}" data-i="${j}">${esc(q.n)}${q.aparte?' ↗':''}</button>`).join('');
+    const on = ch.querySelector('.on'); if (on) on.scrollIntoView({ inline:'center', block:'nearest' });
+  } else {
+    $('chips').hidden = true;
+    $('titulo').innerHTML = k === 'mas' ? 'Más' : 'MAHRA · <em>Gestión</em>';
+  }
+  document.title = (g ? g.paneles[i].n : (k === 'mas' ? 'Más' : 'Inicio')) + ' · MAHRA';
+  const hash = '#' + k + (g && i ? '-' + i : '');
+  if (push && antes !== k + '-' + (i || 0)) history.pushState({ k, i }, '', hash);
+  else history.replaceState({ k, i }, '', hash);
+  try { localStorage.setItem('mahra-app-ultimo', JSON.stringify(ultimo)); } catch (e) {}
+}
+
+function desdeHash(){
+  const h = (location.hash || '').slice(1).split('-');
+  mostrar(h[0] || 'inicio', h[1] !== undefined ? (+h[1] || 0) : undefined, false);
+}
+
+document.addEventListener('click', e => {
+  const n = e.target.closest('[data-nav]');
+  if (n){ const k = n.dataset.nav; mostrar(k, (k === actual.k) ? actual.i : undefined, true); return; }
+  const a = e.target.closest('[data-abrir]');
+  if (a){ mostrar(a.dataset.abrir, +a.dataset.i, true); return; }
+  if (e.target.closest('#bAtras')){ mostrar('mas', 0, true); return; }
+  if (e.target.closest('#bRecargar')){
+    const f = $('frames').querySelector('iframe.on');
+    if (f){ $('cargando').classList.add('on'); f.src = f.dataset.url; }
+    return;
+  }
+  if (e.target.closest('#bSalir')){ if (window.MahraAuth) MahraAuth.salir(); return; }
+  if (e.target.closest('#bInstalar') && window._instalar){ window._instalar.prompt(); window._instalar = null; $('bInstalar').hidden = true; }
+});
+// botón "atrás" del celular: vuelve al panel anterior en vez de cerrar la app
+window.addEventListener('popstate', e => { const s = e.state; if (s) mostrar(s.k, s.i, false); else desdeHash(); });
+
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window._instalar = e; const b = $('bInstalar'); if (b) b.hidden = false; });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+try { Object.assign(ultimo, JSON.parse(localStorage.getItem('mahra-app-ultimo') || '{}')); } catch (e) {}
+navHTML(); inicioHTML(); masHTML(); desdeHash();
+</script>
+</body>
+</html>

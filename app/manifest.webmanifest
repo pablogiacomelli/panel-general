@@ -1,0 +1,23 @@
+{
+  "name": "MAHRA · Gestión",
+  "short_name": "Mahra",
+  "description": "Paneles de gestión de Mahra: ventas, stock, finanzas y marketing.",
+  "id": "/panel-general/app/",
+  "start_url": "/panel-general/app/",
+  "scope": "/panel-general/app/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f0f0d",
+  "theme_color": "#0f0f0d",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Ventas", "url": "/panel-general/app/#ventas", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Stock", "url": "/panel-general/app/#stock", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Cheques", "url": "/panel-general/app/#finanzas-1", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
