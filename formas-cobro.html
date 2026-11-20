@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script>/* prueba local con datos guardados: http://localhost:8766/panel-general/formas-cobro.html?mock=1 */
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&/[?&]mock=1/.test(location.search)){window.MahraAuth={mock:true};}</script>
+<script src="https://pablogiacomelli.github.io/panel-general/auth.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAHRA · Formas de cobro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0f0d;--surface:#171714;--surface2:#1e1e1a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0ede8;--muted:#9a9690;--muted2:#6f6b64;--accent:#d4a853;--gold:#d4a853;--red:#e07060;--green:#8fbe9e;--purple:#a78bfa;--font-display:'Fraunces',Georgia,serif;--font-body:'DM Sans',-apple-system,'Segoe UI',sans-serif;--font-mono:'DM Mono',ui-monospace,Consolas,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden}
+header{padding:26px 40px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.logo{font-family:var(--font-display);font-size:1.6rem;font-weight:300;letter-spacing:-0.01em}
+.logo em{color:var(--accent);font-style:italic}
+.logo-sub{font-size:11px;color:var(--muted2);font-family:var(--font-mono);margin-top:4px;letter-spacing:.05em}
+.header-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--font-mono)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#e8c547}
+.status-dot.ok{background:var(--green)}
+.status-dot.err{background:#ff6060}
+.btn{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:var(--font-mono);font-size:11px;padding:7px 16px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .15s}
+.btn:hover{background:var(--accent);color:#000}
+.btn:disabled{opacity:.4;cursor:default}
+.controls-bar{padding:14px 40px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.range-label{font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;font-family:var(--font-mono)}
+.preset-btns{display:flex;gap:4px;flex-wrap:wrap}
+.preset-btn{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--font-mono);font-size:11px;padding:5px 11px;cursor:pointer;border-radius:3px;transition:all .15s}
+.preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+.preset-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500}
+.preset-btn small{opacity:.7;margin-left:4px}
+.banner{display:none;margin:16px 40px 0;padding:10px 16px;font-size:11px;font-family:var(--font-mono);letter-spacing:.03em;line-height:1.5}
+.banner.visible{display:block}
+.banner.err{background:#e0706018;border:1px solid #e0706050;color:var(--red)}
+main{padding:28px 40px;max-width:1600px}
+.scorecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:20px}
+.scorecard{background:var(--surface);padding:18px 22px;position:relative;overflow:hidden}
+.scorecard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c,var(--accent))}
+.sc-label{font-size:11px;color:var(--muted2);font-family:var(--font-mono);letter-spacing:.05em;margin-bottom:8px}
+.sc-value{font-family:var(--font-display);font-size:27px;font-weight:300;line-height:1}
+.sc-sub{font-size:11px;color:var(--muted);font-family:var(--font-mono);margin-top:7px;line-height:1.45}
+/* balanza deuda vs stock */
+.balanza{background:var(--surface);border:1px solid var(--border);padding:20px 22px;margin-bottom:20px}
+.bal-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.bal-title{font-family:var(--font-display);font-size:17px;font-weight:300}
+.bal-title b{font-weight:400}
+.bal-row{display:grid;grid-template-columns:150px 1fr 130px;gap:12px;align-items:center;margin:8px 0}
+.bal-lbl{font-size:11px;color:var(--muted);font-family:var(--font-mono)}
+.bal-track{height:22px;background:var(--surface2);border-radius:0 4px 4px 0;overflow:hidden;display:flex}
+.bal-seg{height:100%}
+.bal-seg+.bal-seg{margin-left:2px}
+.bal-val{font-family:var(--font-mono);font-size:12px;text-align:right;white-space:nowrap}
+.leg{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
+.leg span{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted);font-family:var(--font-mono)}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:2px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.chart-full{grid-column:1/-1}
+.card{background:var(--surface);border:1px solid var(--border);padding:22px;position:relative;margin-bottom:20px}
+.charts-grid .card{margin-bottom:0}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.card-title{font-family:var(--font-display);font-size:15px;font-weight:300}
+.card-sub{font-size:11px;color:var(--muted2);margin-top:3px;font-family:var(--font-mono);letter-spacing:.03em;line-height:1.5}
+.chart-wrap{position:relative;height:290px}
+.chart-wrap.tall{height:400px}
+.search{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 10px;outline:none;min-width:220px}
+.search:focus{border-color:var(--accent)}
+.table-scroll{max-height:620px;overflow:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);font-weight:400;cursor:pointer;user-select:none;white-space:nowrap;z-index:1}
+.data-table th:hover,.data-table th.sorted{color:var(--accent)}
+.data-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tbody tr{cursor:pointer}
+.data-table tbody tr:hover td{background:var(--surface2)}
+.td-num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:11.5px;white-space:nowrap}
+.data-table th.td-num{text-align:right}
+.muted{color:var(--muted)}
+.pos{color:var(--red)}.neg{color:var(--green)}.warn{color:var(--gold)}
+.tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:2px;font-family:var(--font-mono);letter-spacing:.05em;vertical-align:middle;white-space:nowrap}
+.tag.art{background:#7ba8cc22;color:var(--accent)}
+.tag.ins{background:#8fbe9e22;color:var(--green)}
+.tag.otro{background:#5a575033;color:var(--muted)}
+.tag.venc{background:#e0706022;color:var(--red)}
+.tag.prox{background:#d4a85322;color:var(--gold)}
+.tag.ok{background:#8fbe9e22;color:var(--green)}
+.tag.chq{background:#a78bfa22;color:var(--purple)}
+.tag.warn2{background:#d4a85322;color:var(--gold)}
+tr.sint td{background:#a78bfa0d}
+.mini{display:flex;flex-direction:column;gap:3px;min-width:150px}
+.mini div{height:6px;border-radius:0 3px 3px 0;min-width:1px}
+.note{font-size:10.5px;color:var(--muted);font-family:var(--font-mono);line-height:1.6;margin-top:12px}
+.empty{text-align:center;padding:40px 10px;color:var(--muted);font-size:12px;font-family:var(--font-mono)}
+.loading{display:none;position:fixed;inset:0;background:#0a0a0acc;z-index:700;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.loading.visible{display:flex}
+.spinner{width:34px;height:34px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;font-family:var(--font-mono)}
+.side-modal{position:fixed;inset:0;z-index:600;display:none;justify-content:flex-end}
+.side-modal.open{display:flex}
+.sm-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px)}
+.sm-panel{position:relative;width:min(820px,100%);background:var(--surface);border-left:1px solid var(--border2);height:100%;overflow-y:auto;animation:slide .25s ease-out}
+@keyframes slide{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.sm-header{position:sticky;top:0;background:var(--surface);padding:20px 26px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;z-index:2}
+.sm-eyebrow{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted2);font-family:var(--font-mono);margin-bottom:6px}
+.sm-title{font-family:var(--font-display);font-size:21px;font-weight:300;line-height:1.15}
+.sm-close{background:transparent;border:1px solid var(--border2);color:var(--muted);width:32px;height:32px;cursor:pointer;font-size:18px;border-radius:3px;flex-shrink:0}
+.sm-close:hover{border-color:var(--accent);color:var(--accent)}
+.sm-section{padding:16px 26px;border-bottom:1px solid var(--border)}
+.sm-section h3{font-family:var(--font-display);font-size:14px;font-weight:300;margin-bottom:12px}
+.sm-section h3 small{font-family:var(--font-mono);font-size:10px;color:var(--muted2);margin-left:8px}
+.sm-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.sm-kpi{background:var(--surface);padding:13px 15px}
+.sm-kpi-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);font-family:var(--font-mono);margin-bottom:5px}
+.sm-kpi-value{font-family:var(--font-display);font-size:18px;font-weight:300;line-height:1}
+.sm-table{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono)}
+.sm-table th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);padding:7px 8px;border-bottom:1px solid var(--border);font-weight:400}
+.sm-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.sm-table .td-num{text-align:right}
+details summary{cursor:pointer;font-family:var(--font-mono);font-size:11px;color:var(--accent);padding:4px 0}
+footer{padding:20px 40px;border-top:1px solid var(--border);font-size:10px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;font-family:var(--font-mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media(max-width:900px){header,.controls-bar,main,footer{padding-left:16px;padding-right:16px}.banner{margin-left:16px;margin-right:16px}.charts-grid{grid-template-columns:1fr}.bal-row{grid-template-columns:1fr;gap:4px}.bal-val{text-align:left}.sm-kpis{grid-template-columns:repeat(2,1fr)}}
+.date-in{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;color-scheme:dark}
+.bars{display:flex;flex-direction:column;gap:7px}
+.bar-row{display:grid;grid-template-columns:170px minmax(60px,1fr) 118px;gap:10px;align-items:center}
+.bar-track div{height:100%}
+.bar-lbl{font-size:11.5px}
+.bar-lbl small{display:block;color:var(--muted2);font-family:var(--font-mono);font-size:10px}
+.bar-track{height:16px;background:var(--surface2);border-radius:0 3px 3px 0;overflow:hidden;display:flex}
+.bar-val{font-family:var(--font-mono);font-size:11.5px;text-align:right;white-space:nowrap}
+.bar-val small{color:var(--muted);margin-left:6px}
+tr.fam td{background:var(--surface2);font-weight:500}
+.data-table tbody tr.fam,.data-table tbody tr.det{cursor:default}
+tr.det td:first-child{padding-left:26px}
+@media(max-width:900px){.bar-row{grid-template-columns:1fr;gap:3px}.bar-val{text-align:left}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">MAHRA · <em>Formas de cobro</em></div>
+    <div class="logo-sub">Local, tienda online y Kommo · cómo nos pagan, en cuántas cuotas, con qué banco y cuánto cuesta cobrar</div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill"><span class="status-dot" id="dot"></span><span id="statusTxt">Cargando…</span></div>
+    <button class="btn" id="btnAct" onclick="cargar()">Actualizar</button>
+  </div>
+</header>
+
+<div class="controls-bar">
+  <div class="ctl"><span class="range-label">Período</span>
+    <div class="preset-btns" id="perBtns">
+      <button class="preset-btn" data-p="mes" onclick="setPer('mes')">Este mes</button>
+      <button class="preset-btn" data-p="mesant" onclick="setPer('mesant')">Mes pasado</button>
+      <button class="preset-btn" data-p="90" onclick="setPer('90')">Últimos 90 días</button>
+      <button class="preset-btn" data-p="anio" onclick="setPer('anio')">Año 2026</button>
+    </div>
+    <input type="date" class="date-in" id="fDesde" onchange="setRango()" aria-label="Desde">
+    <input type="date" class="date-in" id="fHasta" onchange="setRango()" aria-label="Hasta">
+  </div>
+  <div class="ctl"><span class="range-label">Canal</span>
+    <div class="preset-btns" id="canBtns">
+      <button class="preset-btn" data-c="" onclick="setCanal('')">Todos</button>
+      <button class="preset-btn" data-c="Local" onclick="setCanal('Local')">Local</button>
+      <button class="preset-btn" data-c="Tienda online" onclick="setCanal('Tienda online')">Tienda online</button>
+      <button class="preset-btn" data-c="Kommo" onclick="setCanal('Kommo')">Kommo</button>
+    </div>
+  </div>
+</div>
+
+<div class="banner err" id="err"></div>
+
+<main>
+  <div class="scorecards" id="kpis"></div>
+
+  <div class="charts-grid">
+    <div class="card chart-full">
+      <div class="card-header"><div><div class="card-title">Cobrado por mes y forma de cobro</div><div class="card-sub" id="subMes"></div></div></div>
+      <div class="chart-wrap"><canvas id="chMes"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Cómo paga cada canal</div><div class="card-sub">Peso de cada forma de cobro dentro del canal</div></div></div>
+      <div class="chart-wrap"><canvas id="chCanal"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Cuotas con tarjeta de crédito · tienda online</div><div class="card-sub">Mercado Pago, Pago Nube y Nave · el local no informa cuotas</div></div></div>
+      <div class="chart-wrap"><canvas id="chCuotas"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div><div class="card-title">Detalle por forma de cobro</div><div class="card-sub" id="subDet"></div></div></div>
+    <div class="table-scroll"><table class="data-table" id="tDet"></table></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Bancos · pagos por Mercado Pago</div><div class="card-sub" id="subBco"></div></div></div>
+      <div class="bars" id="bancos"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Lo que cuesta cobrar con Mercado Pago</div><div class="card-sub">Comisión, financiación de las cuotas, plataforma e impuestos, sobre lo que pagó la clienta</div></div></div>
+      <div class="table-scroll"><table class="data-table" id="tCosto"></table></div>
+      <div class="note" id="notaCosto"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div><div class="card-title">Transferencias de la tienda</div><div class="card-sub">Descuento aplicado · el % sale del CRM y está solo en los pedidos que pasaron por el CRM</div></div></div>
+    <div class="bars" id="transf"></div>
+  </div>
+
+  <div class="note" id="notaGral"></div>
+</main>
+
+<footer><span>MAHRA · Formas de cobro</span><span id="gen"></span></footer>
+
+<div class="loading" id="loading"><div class="spinner"></div><div class="loading-text">Leyendo cobros…</div></div>
+
+<script>
+const MOCK = !!(window.MahraAuth && window.MahraAuth.mock);
+const API = MOCK ? 'mock/formas-cobro.json' : 'https://n8n.mahra-ai.online/webhook/formas-cobro-data';
+const API_KEY = 'mahra-stk-9F3K2P7Q-2026';
+const LS_UI = 'mahra-formascobro-ui-v1';
+// Familias: siempre en este orden y con este color en todos los gráficos
+const FAM = [
+  ['Tarjeta de crédito', '#d4a853'],
+  ['Tarjeta en el local', '#b08a3e'],
+  ['Débito y billeteras', '#7ba8cc'],
+  ['Transferencia', '#8fbe9e'],
+  ['Efectivo', '#c9a0dc'],
+  ['Seña', '#e07060'],
+  ['Otros', '#6f6b64']
+];
+const FCOL = Object.fromEntries(FAM);
+const CANALES = ['Local', 'Tienda online', 'Kommo'];
+
+let D = null, R = [], UI = { per: '90', desde: '', hasta: '', canal: '' };
+const charts = {};
+
+/* ---------- utilidades ---------- */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+const nf0 = new Intl.NumberFormat('es-AR',{maximumFractionDigits:0});
+function $m(n){ return (n<0?'−':'')+'$'+nf0.format(Math.abs(Math.round(n))); }
+function $k(n){ const a=Math.abs(n); const s=n<0?'−':''; if(a>=1e6) return s+'$'+(a/1e6).toLocaleString('es-AR',{maximumFractionDigits:1})+' M'; if(a>=1e3) return s+'$'+Math.round(a/1e3)+' mil'; return s+'$'+Math.round(a); }
+function pct(a,b){ return b ? (a/b*100).toLocaleString('es-AR',{maximumFractionDigits:1})+' %' : '—'; }
+function nn(n){ return nf0.format(Math.round(n)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function sum(a,f){ let s=0; for(const x of a) s+=f(x)||0; return s; }
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fd(f){ return f ? f.slice(8,10)+'/'+f.slice(5,7)+'/'+f.slice(2,4) : ''; }
+const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function mesLbl(ym){ return MES[Number(ym.slice(5,7))-1]+' '+ym.slice(2,4); }
+function mkChart(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); }
+
+/* ---------- clasificación ---------- */
+// Tienda: medio y método de Tiendanube; para "offline" se usa la forma del CRM cuando la hay
+function claseTienda(o, crm){
+  const m = o.medio, t = o.met;
+  if (m === 'mercadopago') {
+    if (t === 'credit_card') return ['Tarjeta de crédito','Mercado Pago · crédito'];
+    if (t === 'debit_card') return ['Débito y billeteras','Mercado Pago · débito'];
+    return ['Débito y billeteras','Mercado Pago · dinero en cuenta'];
+  }
+  if (m === 'pago-nube') return t === 'credit_card' ? ['Tarjeta de crédito','Pago Nube · crédito'] : ['Débito y billeteras','Pago Nube · débito'];
+  if (m === 'nave') return t === 'credit_card' ? ['Tarjeta de crédito','Nave · crédito'] : ['Débito y billeteras','Nave · débito o QR'];
+  if (m === 'gocuotas') return ['Débito y billeteras','GoCuotas · débito en cuotas'];
+  if (m === 'modo') return ['Débito y billeteras','MODO'];
+  if (m === 'offline') {
+    const f = crm && crm[0];
+    if (f === 'a_convenir') return ['Otros','A convenir'];
+    return ['Transferencia','Transferencia'];
+  }
+  return ['Otros','Otro ('+(m||'sin dato')+')'];
+}
+function claseLocal(fp){
+  if (fp === 'TARJETAS') return ['Tarjeta en el local','Tarjeta (crédito o débito)'];
+  if (fp === 'TRANSFERENCIA') return ['Transferencia','Transferencia'];
+  if (fp === 'CONTADO') return ['Efectivo','Efectivo'];
+  if (fp === 'SEÑA') return ['Seña','Seña (sin la forma de pago)'];
+  if (fp === 'LINK DE PAGO') return ['Otros','Link de pago'];
+  return ['Otros', fp ? fp.charAt(0)+fp.slice(1).toLowerCase() : 'Sin dato'];
+}
+function armar(){
+  R = [];
+  for (const o of D.tienda) {
+    const [fam, det] = claseTienda(o, D.crm[o.n]);
+    const cr = D.crm[o.n];
+    R.push({ f:o.f, canal:'Tienda online', fam, det, t:o.t, ops:1, c:o.c||1, n:o.n, medio:o.medio, desc: cr ? cr[1] : null, descMonto:o.desc||0 });
+  }
+  for (const x of D.local) {
+    const [fam, det] = claseLocal(x.fp);
+    R.push({ f:x.f, canal: x.fu === 'Kommo' ? 'Kommo' : 'Local', fam, det, t:x.t, ops:null, c:null });
+  }
+}
+
+/* ---------- filtros ---------- */
+function rangoPer(p){
+  const h = new Date(); h.setHours(0,0,0,0);
+  if (p === 'mes') return [iso(new Date(h.getFullYear(), h.getMonth(), 1)), iso(h)];
+  if (p === 'mesant') return [iso(new Date(h.getFullYear(), h.getMonth()-1, 1)), iso(new Date(h.getFullYear(), h.getMonth(), 0))];
+  if (p === 'anio') return ['2026-01-01', iso(h)];
+  const d = new Date(h); d.setDate(d.getDate()-89); return [iso(d), iso(h)];
+}
+function setPer(p){ UI.per = p; [UI.desde, UI.hasta] = rangoPer(p); guardar(); render(); }
+function setRango(){ UI.per = ''; UI.desde = document.getElementById('fDesde').value; UI.hasta = document.getElementById('fHasta').value; guardar(); render(); }
+function setCanal(c){ UI.canal = c; guardar(); render(); }
+function guardar(){ lsSet(LS_UI, JSON.stringify(UI)); }
+function enRango(f){ return f >= UI.desde && f <= UI.hasta; }
+
+/* ---------- carga ---------- */
+async function cargar(){
+  const dot = document.getElementById('dot'), st = document.getElementById('statusTxt'), err = document.getElementById('err');
+  document.getElementById('loading').classList.add('visible'); document.getElementById('btnAct').disabled = true;
+  dot.className = 'status-dot'; st.textContent = 'Cargando…'; err.classList.remove('visible');
+  try {
+    const r = MOCK ? await fetch(API) : await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','x-mahra-key':API_KEY},body:'{}'});
+    const t = await r.text(); let j; try { j = JSON.parse(t); } catch(e){ throw new Error('respuesta no válida del servidor'); }
+    if (Array.isArray(j)) j = j[0];
+    if (!j || j.ok === false) throw new Error((j && j.error) || 'error');
+    D = j; armar();
+    dot.className = 'status-dot ok'; st.textContent = 'Actualizado ' + (j.generado || '');
+    document.getElementById('gen').textContent = 'Datos del ' + (j.generado || '') + (MOCK ? ' · PRUEBA LOCAL' : '');
+    render();
+  } catch(e) {
+    dot.className = 'status-dot err'; st.textContent = 'Error';
+    err.textContent = 'No se pudieron leer los cobros: ' + e.message; err.classList.add('visible');
+  } finally {
+    document.getElementById('loading').classList.remove('visible'); document.getElementById('btnAct').disabled = false;
+  }
+}
+
+/* ---------- render ---------- */
+function kpi(lbl, val, sub, col){ return '<div class="scorecard" style="--c:'+(col||'var(--accent)')+'"><div class="sc-label">'+lbl+'</div><div class="sc-value">'+val+'</div>'+(sub?'<div class="sc-sub">'+sub+'</div>':'')+'</div>'; }
+function render(){
+  if (!D) return;
+  document.querySelectorAll('#perBtns .preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.p===UI.per));
+  document.querySelectorAll('#canBtns .preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.c===UI.canal));
+  document.getElementById('fDesde').value = UI.desde; document.getElementById('fHasta').value = UI.hasta;
+  Chart.defaults.color='#9a9690'; Chart.defaults.font.family="'DM Mono',monospace"; Chart.defaults.font.size=10.5; Chart.defaults.borderColor='rgba(255,255,255,0.06)';
+  const TT={backgroundColor:'#1e1e1a',borderColor:'rgba(255,255,255,.14)',borderWidth:1,titleColor:'#f0ede8',bodyColor:'#f0ede8',padding:10};
+
+  const V = R.filter(r => enRango(r.f) && (!UI.canal || r.canal === UI.canal));
+  const tot = sum(V, r=>r.t);
+  const verTienda = !UI.canal || UI.canal === 'Tienda online';
+  const MPall = verTienda ? D.mp.filter(p => enRango(p.f)) : [];
+  const MP = MPall.filter(p => p.e === 'approved');
+  const lblPer = fd(UI.desde)+' al '+fd(UI.hasta)+(UI.canal ? ' · '+UI.canal : '');
+
+  // indicadores
+  const tarj = sum(V.filter(r=>r.fam==='Tarjeta de crédito'||r.fam==='Tarjeta en el local'), r=>r.t);
+  const cred = V.filter(r=>r.canal==='Tienda online' && r.fam==='Tarjeta de crédito');
+  const credT = sum(cred, r=>r.t), credC = sum(cred.filter(r=>r.c>1), r=>r.t);
+  const c3 = sum(cred.filter(r=>r.c===3), r=>r.t), c6 = sum(cred.filter(r=>r.c===6), r=>r.t);
+  const trf = V.filter(r=>r.fam==='Transferencia'), trfT = sum(trf, r=>r.t);
+  const tp = sum(MP, p=>p.tp), costo = sum(MP, p=>p.tp - p.neto);
+  const rech = MPall.filter(p=>p.e==='rejected'), dev = MPall.filter(p=>p.e==='refunded');
+  const opsT = sum(V.filter(r=>r.canal==='Tienda online'), r=>r.ops);
+  document.getElementById('kpis').innerHTML =
+    kpi('Cobrado', $k(tot), lblPer + (opsT ? '<br>'+nn(opsT)+' órdenes de la tienda' : '')) +
+    kpi('Con tarjeta', pct(tarj, tot), $k(tarj)+' · crédito de la tienda y tarjetas del local', FCOL['Tarjeta de crédito']) +
+    kpi('En cuotas', credT ? pct(credC, credT) : '—', credT ? 'de lo cobrado con crédito en la tienda<br>3 cuotas '+pct(c3,credT)+' · 6 cuotas '+pct(c6,credT) : 'sin crédito de la tienda en el período', '#b08a3e') +
+    kpi('Transferencia', pct(trfT, tot), $k(trfT), FCOL['Transferencia']) +
+    (verTienda ? kpi('Costo de cobrar con Mercado Pago', tp ? pct(costo, tp) : '—', tp ? $k(costo)+' sobre '+$k(tp)+' cobrados<br>'+nn(rech.length)+' rechazados'+(dev.length?' · '+nn(dev.length)+' devueltos':'') : 'sin pagos de Mercado Pago', '#e07060') : '');
+
+  // por mes
+  const meses = [...new Set(V.map(r=>r.f.slice(0,7)))].sort();
+  document.getElementById('subMes').textContent = lblPer + ' · tocá una forma en la leyenda para ocultarla';
+  mkChart('chMes',{type:'bar',data:{labels:meses.map(mesLbl),datasets:FAM.map(([f,c])=>({label:f,backgroundColor:c,data:meses.map(m=>sum(V.filter(r=>r.fam===f&&r.f.slice(0,7)===m),r=>r.t))})).filter(ds=>ds.data.some(v=>Math.abs(v)>0.5))},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>$k(v)}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{callbacks:{label:c=>{ const t=sum(c.chart.data.datasets,ds=>ds.data[c.dataIndex]); return ' '+c.dataset.label+': '+$m(c.parsed.y)+' ('+pct(c.parsed.y,t)+')'; },footer:i=>'Total: '+$m(sum(i,x=>x.parsed.y))}})}}});
+
+  // por canal (100 %)
+  const cans = CANALES.filter(c=>V.some(r=>r.canal===c));
+  const totCan = Object.fromEntries(cans.map(c=>[c, sum(V.filter(r=>r.canal===c), r=>r.t)]));
+  mkChart('chCanal',{type:'bar',data:{labels:cans,datasets:FAM.map(([f,col])=>({label:f,backgroundColor:col,data:cans.map(c=>{ const v=sum(V.filter(r=>r.canal===c&&r.fam===f),r=>r.t); return totCan[c]?v/totCan[c]*100:0; }),raw:cans.map(c=>sum(V.filter(r=>r.canal===c&&r.fam===f),r=>r.t))})).filter(ds=>ds.data.some(v=>v>0.05))},
+    options:{indexAxis:'y',maintainAspectRatio:false,interaction:{mode:'index',axis:'y',intersect:false},scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+' %'}},y:{stacked:true,grid:{display:false},ticks:{color:'#f0ede8'}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{callbacks:{title:i=>i[0].label+' · '+$m(totCan[i[0].label]),label:c=>' '+c.dataset.label+': '+c.parsed.x.toLocaleString('es-AR',{maximumFractionDigits:1})+' % · '+$m(c.dataset.raw[c.dataIndex])}})}}});
+
+  // cuotas tienda
+  const cuotas = [...new Set(cred.map(r=>r.c))].sort((a,b)=>a-b);
+  const medios = [['Mercado Pago · crédito','#d4a853'],['Pago Nube · crédito','#7ba8cc'],['Nave · crédito','#c9a0dc']];
+  mkChart('chCuotas',{type:'bar',data:{labels:cuotas.map(c=>c===1?'1 pago':c+' cuotas'),datasets:medios.map(([m,col])=>({label:m.split(' · ')[0],backgroundColor:col,data:cuotas.map(c=>sum(cred.filter(r=>r.det===m&&r.c===c),r=>r.t)),ops:cuotas.map(c=>cred.filter(r=>r.det===m&&r.c===c).length)})).filter(ds=>ds.data.some(v=>v>0))},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>$k(v)}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9}},tooltip:Object.assign({},TT,{callbacks:{label:c=>' '+c.dataset.label+': '+$m(c.parsed.y)+' · '+c.dataset.ops[c.dataIndex]+' órdenes',footer:i=>'Total: '+$m(sum(i,x=>x.parsed.y))+' ('+pct(sum(i,x=>x.parsed.y),credT)+' del crédito)'}})}}});
+
+  // detalle por forma
+  const filas = [];
+  for (const [f,col] of FAM) {
+    const F = V.filter(r=>r.fam===f); if (!F.length) continue;
+    const ft = sum(F, r=>r.t);
+    if (Math.abs(ft) < 0.5) continue;
+    filas.push('<tr class="fam"><td><span class="tag" style="background:'+col+'33;color:'+col+'">'+esc(f)+'</span></td>'+cans.map(c=>'<td class="td-num">'+$m(sum(F.filter(r=>r.canal===c),r=>r.t))+'</td>').join('')+'<td class="td-num">'+$m(ft)+'</td><td class="td-num">'+pct(ft,tot)+'</td><td class="td-num">'+(sum(F,r=>r.ops)?nn(sum(F,r=>r.ops)):'')+'</td></tr>');
+    const dets = [...new Set(F.map(r=>r.det))].map(d=>[d, sum(F.filter(r=>r.det===d),r=>r.t)]).sort((a,b)=>b[1]-a[1]);
+    if (dets.length > 1 || dets[0][0] !== f) for (const [d,dt] of dets) {
+      const G = F.filter(r=>r.det===d);
+      filas.push('<tr class="det"><td class="muted">'+esc(d)+'</td>'+cans.map(c=>'<td class="td-num muted">'+$m(sum(G.filter(r=>r.canal===c),r=>r.t))+'</td>').join('')+'<td class="td-num">'+$m(dt)+'</td><td class="td-num muted">'+pct(dt,tot)+'</td><td class="td-num muted">'+(sum(G,r=>r.ops)?nn(sum(G,r=>r.ops)):'')+'</td></tr>');
+    }
+  }
+  document.getElementById('subDet').textContent = lblPer + ' · las órdenes se cuentan solo en la tienda online';
+  document.getElementById('tDet').innerHTML = '<thead><tr><th>Forma de cobro</th>'+cans.map(c=>'<th class="td-num">'+esc(c)+'</th>').join('')+'<th class="td-num">Total</th><th class="td-num">%</th><th class="td-num">Órdenes</th></tr></thead><tbody>'+(filas.join('')||'<tr><td colspan="9" class="empty">Sin cobros en el período</td></tr>')+'</tbody>'+
+    (filas.length?'<tfoot><tr class="fam"><td>Total</td>'+cans.map(c=>'<td class="td-num">'+$m(totCan[c])+'</td>').join('')+'<td class="td-num">'+$m(tot)+'</td><td class="td-num">100 %</td><td class="td-num">'+(opsT?nn(opsT):'')+'</td></tr></tfoot>':'');
+
+  // bancos
+  const bco = {};
+  for (const p of MP) { const k = p.em || 'Sin dato'; if (!bco[k]) bco[k] = { t:0, n:0, c:0, c6:0 }; bco[k].t += p.tp; bco[k].n++; bco[k].c += p.c; if (p.c >= 6) bco[k].c6 += p.tp; }
+  let bl = Object.entries(bco).sort((a,b)=>b[1].t-a[1].t);
+  if (bl.length > 12) { const resto = bl.slice(11), o = { t:sum(resto,x=>x[1].t), n:sum(resto,x=>x[1].n), c:sum(resto,x=>x[1].c), c6:0 }; bl = bl.slice(0,11).concat([['Otros '+resto.length+' bancos', o]]); }
+  const bmax = bl.length ? Math.max(...bl.map(x=>x[1].t)) : 1;
+  document.getElementById('subBco').textContent = verTienda ? (MP.length+' pagos aprobados · '+$k(tp)+' · el banco sale de la tarjeta · Pago Nube, Nave, MODO y el local no informan banco') : 'Elegí Todos o Tienda online: solo la tienda cobra por Mercado Pago';
+  document.getElementById('bancos').innerHTML = bl.length ? bl.map(([k,b])=>'<div class="bar-row"><div class="bar-lbl">'+esc(k)+'<small>'+b.n+' pagos · '+(b.c/b.n).toLocaleString('es-AR',{maximumFractionDigits:1})+' cuotas promedio</small></div><div class="bar-track"><div style="width:'+(b.t/bmax*100).toFixed(1)+'%;background:var(--accent)"></div></div><div class="bar-val">'+$k(b.t)+'<small>'+pct(b.t,tp)+'</small></div></div>').join('') : '<div class="empty">Sin pagos de Mercado Pago en el período</div>';
+
+  // costo MP por cuotas
+  const cg = {};
+  for (const p of MP) { const k = p.tipo==='credit_card' ? (p.c===1?'Crédito · 1 pago':'Crédito · '+p.c+' cuotas') : (p.tipo==='debit_card'?'Débito':'Dinero en cuenta'); if(!cg[k]) cg[k]={n:0,tp:0,cmp:0,cf:0,cpl:0,imp:0,neto:0,o:p.tipo==='credit_card'?p.c:99}; const g=cg[k]; g.n++; g.tp+=p.tp; g.cmp+=p.cmp; g.cf+=p.cf; g.cpl+=p.cpl; g.imp+=p.imp; g.neto+=p.neto; }
+  const cl = Object.entries(cg).sort((a,b)=>a[1].o-b[1].o);
+  document.getElementById('tCosto').innerHTML = '<thead><tr><th>Cómo pagó</th><th class="td-num">Pagos</th><th class="td-num">Cobrado</th><th class="td-num">Comisión</th><th class="td-num">Financiación</th><th class="td-num">Plataforma e imp.</th><th class="td-num">Costo</th><th class="td-num">Nos queda</th></tr></thead><tbody>'+
+    (cl.length ? cl.map(([k,g])=>{ const co=g.tp-g.neto; return '<tr><td>'+esc(k)+'</td><td class="td-num">'+g.n+'</td><td class="td-num">'+$m(g.tp)+'</td><td class="td-num">'+$m(g.cmp)+'</td><td class="td-num">'+$m(g.cf)+'</td><td class="td-num">'+$m(g.cpl+g.imp)+'</td><td class="td-num pos">'+pct(co,g.tp)+'</td><td class="td-num">'+$m(g.neto)+'</td></tr>'; }).join('') : '<tr><td colspan="8" class="empty">Sin pagos de Mercado Pago en el período</td></tr>')+'</tbody>'+
+    (cl.length ? '<tfoot><tr class="fam"><td>Total</td><td class="td-num">'+MP.length+'</td><td class="td-num">'+$m(tp)+'</td><td class="td-num">'+$m(sum(MP,p=>p.cmp))+'</td><td class="td-num">'+$m(sum(MP,p=>p.cf))+'</td><td class="td-num">'+$m(sum(MP,p=>p.cpl+p.imp))+'</td><td class="td-num pos">'+pct(costo,tp)+'</td><td class="td-num">'+$m(sum(MP,p=>p.neto))+'</td></tr></tfoot>' : '');
+  const otros = tp - sum(MP,p=>p.neto) - sum(MP,p=>p.cmp+p.cf+p.cpl+p.imp);
+  document.getElementById('notaCosto').innerHTML = 'Cobrado = lo que pagó la clienta, con la financiación incluida. Costo = cobrado − lo que nos acredita Mercado Pago.'+(Math.abs(otros)>1?' Hay '+$m(otros)+' de diferencia que Mercado Pago no detalla (por ejemplo, devoluciones parciales).':'');
+
+  // transferencias tienda
+  const tt = V.filter(r=>r.canal==='Tienda online' && r.fam==='Transferencia');
+  const tg = {};
+  for (const r of tt) { const k = r.desc != null ? (r.desc > 0 ? r.desc+' % de descuento' : 'Sin descuento') : (r.descMonto > 0 ? 'Con descuento (% sin dato)' : 'Sin dato del CRM'); if(!tg[k]) tg[k]={t:0,n:0}; tg[k].t+=r.t; tg[k].n++; }
+  const tl = Object.entries(tg).sort((a,b)=>b[1].t-a[1].t), ttT = sum(tt,r=>r.t), tmax = tl.length?tl[0][1].t:1;
+  document.getElementById('transf').innerHTML = tl.length ? tl.map(([k,g])=>'<div class="bar-row"><div class="bar-lbl">'+esc(k)+'<small>'+g.n+' órdenes</small></div><div class="bar-track"><div style="width:'+(g.t/tmax*100).toFixed(1)+'%;background:'+FCOL['Transferencia']+'"></div></div><div class="bar-val">'+$k(g.t)+'<small>'+pct(g.t,ttT)+'</small></div></div>').join('') : '<div class="empty">'+(verTienda?'Sin transferencias de la tienda en el período':'Elegí Todos o Tienda online')+'</div>';
+
+  document.getElementById('notaGral').innerHTML =
+    '<b>De dónde sale cada dato.</b> Tienda online: planilla de pedidos de Tiendanube (medio, método de pago, cuotas y total con envío), '+nn(D.tienda.length)+' órdenes desde el '+fd(D.desde)+'. Banco y costo: pagos de Mercado Pago de la tienda, unidos por número de orden. '+
+    'Local y Kommo: planilla de ventas consolidadas (EcommApp); en el local la tarjeta no distingue crédito de débito ni trae banco o cuotas, y "Seña" es un pago a cuenta sin forma de pago. '+
+    'El % de descuento de las transferencias está solo en los pedidos que pasaron por el CRM.';
+}
+
+/* ---------- inicio ---------- */
+try { const u = JSON.parse(lsGet(LS_UI)||'null'); if (u && typeof u === 'object') { if (typeof u.canal === 'string' && (u.canal === '' || CANALES.indexOf(u.canal) >= 0)) UI.canal = u.canal; if (u.per) UI.per = u.per; if (!u.per && u.desde && u.hasta) { UI.per = ''; UI.desde = u.desde; UI.hasta = u.hasta; } } } catch(e){}
+if (UI.per) [UI.desde, UI.hasta] = rangoPer(UI.per);
+cargar();
+</script>
+</body>
+</html>
